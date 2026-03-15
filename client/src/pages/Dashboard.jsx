@@ -1,31 +1,95 @@
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import StudyProgressWidget from '../components/dashboard/widgets/StudyProgressWidget';
+import MentorMessagesWidget from '../components/dashboard/widgets/MentorMessagesWidget';
+import CommunityActivityWidget from '../components/dashboard/widgets/CommunityActivityWidget';
+import UpcomingSessionsWidget from '../components/dashboard/widgets/UpcomingSessionsWidget';
+import RecommendedResourcesWidget from '../components/dashboard/widgets/RecommendedResourcesWidget';
+import WeeklyStudyChart from '../components/dashboard/charts/WeeklyStudyChart';
+import CourseCompletionChart from '../components/dashboard/charts/CourseCompletionChart';
 
 const Dashboard = () => {
   const { user } = useAuth();
 
-  const quickLinks = [
-    { title: '🤖 AI Assistant', path: '/ai-assistant', desc: 'Chat with AI tutor' },
-    { title: '👨‍🏫 Mentors', path: '/mentors', desc: 'Find a mentor' },
-    { title: '💬 Community', path: '/community', desc: 'Join discussions' },
-    { title: '🧠 Mental Health', path: '/mental-health', desc: 'Get support' },
-    { title: '💼 Internships', path: '/internships', desc: 'Browse opportunities' },
-    { title: '👤 Profile', path: '/profile', desc: 'Update your profile' },
-  ];
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.name}!</h1>
-      <p className="text-gray-600 mb-8">Role: <span className="capitalize font-medium">{user?.role}</span></p>
+    <div className="space-y-6">
+      {/* Welcome header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            {greeting()}, {user?.name?.split(' ')[0]} 👋
+          </h1>
+          <p className="text-gray-500 mt-1">Here's what's happening with your studies today.</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 font-medium capitalize">
+            🎓 {user?.role || 'Student'}
+          </span>
+          {user?.university && (
+            <span className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+              🏫 {user.university}
+            </span>
+          )}
+        </div>
+      </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {quickLinks.map((link) => (
-          <Link key={link.path} to={link.path}
-            className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-            <h3 className="text-lg font-semibold mb-1">{link.title}</h3>
-            <p className="text-gray-600 text-sm">{link.desc}</p>
-          </Link>
+      {/* Quick stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        {[
+          { label: 'Study Hours', value: '18.5h', change: '+2.5h', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: '📖' },
+          { label: 'Assignments', value: '34/42', change: '81%', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: '✅' },
+          { label: 'Mentor Sessions', value: '3', change: 'This week', color: 'text-purple-600', bg: 'bg-purple-50', icon: '👨‍🏫' },
+          { label: 'Community Posts', value: '8', change: '+3 new', color: 'text-amber-600', bg: 'bg-amber-50', icon: '💬' },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 + i * 0.05 }}
+            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className={`text-2xl`}>{stat.icon}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stat.bg} ${stat.color}`}>{stat.change}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+          </motion.div>
         ))}
+      </motion.div>
+
+      {/* Charts row */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <WeeklyStudyChart />
+        <CourseCompletionChart />
+      </div>
+
+      {/* Widgets grid */}
+      <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <StudyProgressWidget />
+        <MentorMessagesWidget />
+        <UpcomingSessionsWidget />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <CommunityActivityWidget />
+        <RecommendedResourcesWidget />
       </div>
     </div>
   );

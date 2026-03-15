@@ -3,4 +3,72 @@ node_modules
 client/node_modules
 server/node_modules
 dist
-build
+buildCreate a complete authentication and user management system for the Student Success Platform.
+
+Tech stack:
+Node.js
+Express
+MongoDB
+JWT Authentication
+bcrypt password hashing
+
+User roles:
+Student
+Mentor
+Counselor
+Admin
+
+Database schema:
+
+User
+- _id
+- name
+- email
+- password
+- role (student, mentor, counselor, admin)
+- university
+- profileImage
+- createdAt
+- updatedAt
+
+Backend API routes:
+
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/forgot-password
+POST /api/auth/reset-password
+GET /api/auth/me
+
+Features:
+
+1. Register user
+2. Login user
+3. Password hashing
+4. JWT token generation
+5. Protected routes middleware
+6. Role-based access middleware
+
+Frontend pages:
+
+/login
+/register
+/forgot-password
+
+Forms must include validation.
+
+Create folder structure:
+
+server
+  controllers
+  routes
+  models
+  middleware
+  utils
+
+client
+  pages
+  components
+  services
+
+Implement login state management using React Context or React Query.

@@ -1,8 +1,16 @@
 const OpenAI = require('openai');
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiInstance = null;
+const getOpenAI = () => {
+  if (!openaiInstance && process.env.OPENAI_API_KEY) {
+    try {
+      openaiInstance = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    } catch (e) {
+      console.warn('Failed to initialize OpenAI:', e.message);
+    }
+  }
+  return openaiInstance;
+};
 
 /**
  * AI Tutor Chat
@@ -21,6 +29,9 @@ const chatWithTutor = async (messages) => {
       - Adapting your teaching style to the student's level
       Be encouraging, patient, and thorough in your explanations.`,
     };
+
+    const openai = getOpenAI();
+    if (!openai) return 'AI Tutor is currently unavailable. Please configure the OpenAI API key.';
 
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
@@ -44,6 +55,9 @@ const chatWithTutor = async (messages) => {
  */
 const getRecommendations = async (topic, level = 'intermediate') => {
   try {
+    const openai = getOpenAI();
+    if (!openai) return 'Resource recommendations are currently unavailable. Please configure the OpenAI API key.';
+
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -74,6 +88,9 @@ const getRecommendations = async (topic, level = 'intermediate') => {
  */
 const analyzeResume = async (resumeText) => {
   try {
+    const openai = getOpenAI();
+    if (!openai) return 'Resume analysis is currently unavailable. Please configure the OpenAI API key.';
+
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [

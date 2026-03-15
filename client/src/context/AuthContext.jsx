@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = async () => {
     try {
       const { data } = await api.get('/auth/me');
-      setUser(data);
+      setUser(data.user || data);
     } catch (error) {
       logout();
     } finally {
@@ -32,19 +32,21 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
-    setToken(data.token);
-    setUser(data);
-    localStorage.setItem('token', data.token);
-    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+    const authToken = data.token;
+    setToken(authToken);
+    setUser(data.user || data);
+    localStorage.setItem('token', authToken);
+    api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     return data;
   };
 
-  const register = async (name, email, password, role) => {
-    const { data } = await api.post('/auth/register', { name, email, password, role });
-    setToken(data.token);
-    setUser(data);
-    localStorage.setItem('token', data.token);
-    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+  const register = async (name, email, password, role, university = '') => {
+    const { data } = await api.post('/auth/register', { name, email, password, role, university });
+    const authToken = data.token;
+    setToken(authToken);
+    setUser(data.user || data);
+    localStorage.setItem('token', authToken);
+    api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     return data;
   };
 
@@ -55,8 +57,18 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
   };
 
+  const forgotPassword = async (email) => {
+    const { data } = await api.post('/auth/forgot-password', { email });
+    return data;
+  };
+
+  const resetPassword = async (resetToken, password) => {
+    const { data } = await api.post(`/auth/reset-password/${resetToken}`, { password });
+    return data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, forgotPassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
