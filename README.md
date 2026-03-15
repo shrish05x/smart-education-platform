@@ -1,90 +1,414 @@
-# Smart Education Platform
+# Smart Education Platform - Complete Setup Guide
 
-A full-stack MERN (MongoDB, Express.js, React, Node.js) education platform with AI-powered tutoring, mentorship, community forums, mental health support, and internship listings.
+## 📋 Table of Contents
+- [For New Team Members (First Time Setup)](#for-new-team-members-first-time-setup)
+- [For Existing Team Members (Already Cloned)](#for-existing-team-members-already-cloned)
+- [Prerequisites](#prerequisites)
+- [Environment Configuration](#environment-configuration)
+- [Running the Application](#running-the-application)
+- [Troubleshooting](#troubleshooting)
+- [Project Overview](#project-overview)
 
-## Tech Stack
+---
 
-- **Frontend:** React (Vite) + TailwindCSS + React Router DOM + Axios
-- **Backend:** Node.js + Express.js + Mongoose
-- **Database:** MongoDB
-- **Real-Time:** Socket.io
-- **Auth:** JWT with role-based access control
-- **AI:** OpenAI API integration
+## 🆕 For New Team Members (First Time Setup)
+
+If you're joining the team and haven't cloned the project yet, follow these steps:
+
+### 1. Prerequisites Check
+Ensure you have the following installed on your system:
+- **Node.js** (v18 or higher) - [Download from nodejs.org](https://nodejs.org/)
+- **Git** - [Download from git-scm.com](https://git-scm.com/)
+- **MongoDB** - Either local or MongoDB Atlas account
+
+### 2. Clone the Repository
+```bash
+# Clone the project
+git clone <repository-url-here>
+cd smart-education-platform
+```
+
+### 3. Install Dependencies
+```bash
+# Install server dependencies
+cd server
+npm install
+
+# Install client dependencies
+cd ../client
+npm install
+```
+
+### 4. Set Up MongoDB
+Choose one of the following options:
+
+**Option A: Local MongoDB**
+- Download from [mongodb.com](https://www.mongodb.com/try/download/community)
+- Install and start MongoDB service
+
+**Option B: MongoDB Atlas (Cloud)**
+- Create account at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+- Create a cluster and get connection string
+
+### 5. Configure Environment Variables
+Continue to the [Environment Configuration](#environment-configuration) section below.
+
+---
+
+## 🔄 For Existing Team Members (Already Cloned)
+
+If you already have the project cloned, follow these quick steps:
+
+### 1. Pull Latest Changes
+```bash
+# Navigate to project directory
+cd smart-education-platform
+
+# Pull latest changes
+git pull origin main
+```
+
+### 2. Install/Update Dependencies
+```bash
+# Install/update server dependencies
+cd server
+npm install
+
+# Install/update client dependencies
+cd ../client
+npm install
+```
+
+### 3. Check Environment Configuration
+Ensure your `.env` files are properly configured (see [Environment Configuration](#environment-configuration)).
+
+### 4. Start the Application
+Continue to the [Running the Application](#running-the-application) section below.
+
+---
+
+## 📋 Prerequisites
+
+### Required Software
+- **Node.js** (v18+) - JavaScript runtime
+- **MongoDB** - Database (local or Atlas)
+- **Git** - Version control
+
+### Optional (for full functionality)
+- **OpenAI API Key** - For AI tutoring features
+
+### System Requirements
+- **RAM**: 4GB minimum, 8GB recommended
+- **Storage**: 2GB free space
+- **OS**: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+)
+
+---
+
+## ⚙️ Environment Configuration
+
+### Server Configuration (`server/.env`)
+
+Create or update the `server/.env` file with:
+
+```env
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration
+MONGO_URI=mongodb://localhost:27017/smart-education-platform
+# OR for MongoDB Atlas:
+# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/smart-education-platform
+
+# Authentication
+JWT_SECRET=your_secure_jwt_secret_key_here_change_this
+JWT_RESET_SECRET=your_reset_secret_key_here_change_this
+JWT_RESET_EXPIRE=10m
+
+# External Services
+OPENAI_API_KEY=your_openai_api_key_here_optional
+
+# CORS Configuration
+CLIENT_URL=http://localhost:5173
+```
+
+### Client Configuration (`client/.env`)
+
+Create or update the `client/.env` file with:
+
+```env
+# API Configuration
+VITE_API_URL=http://localhost:5000/api
+```
+
+### Important Notes
+- **Never commit `.env` files** to version control
+- **Use strong, unique secrets** for JWT keys
+- **Keep API keys secure** and don't share them
+- **For team collaboration**, coordinate database access
+
+---
+
+## 🚀 Running the Application
+
+### Method 1: Manual Start (Recommended for Development)
+
+**Terminal 1 - Start Backend Server:**
+```bash
+cd server
+npm run dev
+```
+Server will run on: `http://localhost:5000`
+
+**Terminal 2 - Start Frontend Client:**
+```bash
+cd client
+npm run dev
+```
+Client will run on: `http://localhost:5173`
+
+### Method 2: Using Scripts (if available)
+
+Check if there are any custom scripts in the root directory or use the above manual method.
+
+### Access the Application
+
+Once both are running:
+1. Open browser
+2. Navigate to: **`http://localhost:5173`**
+3. Register a new account or login
+
+### Stopping the Application
+
+- Press `Ctrl+C` in each terminal to stop the servers
+- Or close the terminal windows
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues & Solutions
+
+#### 1. MongoDB Connection Error
+```
+Error: MongoDB connection failed
+```
+**Solutions:**
+- Ensure MongoDB is running locally (`mongod` command)
+- Check your `MONGO_URI` in `server/.env`
+- For Atlas: Verify network access and credentials
+
+#### 2. Port Already in Use
+```
+Error: Port 5000/5173 already in use
+```
+**Solutions:**
+- Change ports in `.env` files
+- Kill processes using the ports:
+  ```bash
+  # Windows
+  netstat -ano | findstr :5000
+  taskkill /PID <PID> /F
+
+  # macOS/Linux
+  lsof -ti:5000 | xargs kill -9
+  ```
+
+#### 3. Dependencies Installation Failed
+```
+npm install failed
+```
+**Solutions:**
+- Clear npm cache: `npm cache clean --force`
+- Delete `node_modules` and `package-lock.json`, then `npm install`
+- Check Node.js version: `node --version`
+
+#### 4. OpenAI Features Not Working
+```
+AI features unavailable
+```
+**Solutions:**
+- Add valid `OPENAI_API_KEY` to `server/.env`
+- Ensure API key has credits
+- Check OpenAI API status
+
+#### 5. CORS Errors
+```
+Access-Control-Allow-Origin error
+```
+**Solutions:**
+- Verify `CLIENT_URL` in `server/.env` matches your frontend URL
+- Check if both servers are running on correct ports
+
+#### 6. Build Errors
+```
+Module not found
+```
+**Solutions:**
+- Ensure all dependencies are installed
+- Clear build cache: `rm -rf node_modules/.vite` (client)
+- Restart development servers
+
+### Getting Help
+1. Check terminal/console logs for detailed error messages
+2. Verify all prerequisites are installed correctly
+3. Ensure `.env` files are in the correct directories
+4. Try restarting both servers
+5. Contact team lead or check project documentation
+
+---
+
+## 📖 Project Overview
+
+### Tech Stack
+- **Frontend**: React 19 + Vite + TailwindCSS
+- **Backend**: Node.js + Express.js + MongoDB
+- **Real-time**: Socket.io
+- **Authentication**: JWT
+- **AI**: OpenAI API
+
+### Key Features
+- 🤖 AI-powered tutoring
+- 👨‍🏫 Mentor-student matching
+- 💬 Community forums
+- 🧠 Mental health support
+- 💼 Internship board
+- 📊 Analytics dashboard
+- 🔐 Role-based access control
+
+### User Roles
+- **Student**: Access learning features
+- **Mentor**: Provide guidance
+- **Counselor**: Mental health support
+- **Admin**: Platform management
+
+### Project Structure
+```
+smart-education-platform/
+├── client/          # React frontend
+├── server/          # Express backend
+├── README.md        # Project info
+└── SETUP.md         # This setup guide
+```
+
+### Development Workflow
+1. Create feature branch from `main`
+2. Make changes and test locally
+3. Commit with descriptive messages
+4. Push branch and create pull request
+5. Code review and merge
+
+---
+
+## 🎯 Quick Commands Reference
+
+```bash
+# Clone project
+git clone <url>
+cd smart-education-platform
+
+# Install dependencies
+cd server && npm install
+cd ../client && npm install
+
+# Start development servers
+# Terminal 1: cd server && npm run dev
+# Terminal 2: cd client && npm run dev
+
+# Pull latest changes
+git pull origin main
+
+# Check status
+git status
+
+# Create new branch
+git checkout -b feature/your-feature-name
+```
+
+---
+
+**Need help?** Contact the development team or check the project documentation.
+
+**Happy coding! 🚀**
+```
+**Solution:** Ensure MongoDB is running. Use the setup instructions above.
+
+### Port Already in Use
+```
+Error: Port 5000/5173 is already in use
+```
+**Solution:** Kill the process using that port or change the port in `.env`
+
+### Module Not Found Errors
+```
+npm ERR! code ERESOLVE
+```
+**Solution:** Run `npm install` in both server and client directories
+
+### CORS Errors
+```
+Access to XMLHttpRequest blocked by CORS policy
+```
+**Solution:** Ensure backend is running and `CLIENT_URL` in server `.env` matches your frontend URL
 
 ## Project Structure
 
 ```
 smart-education-platform/
-├── client/          # React frontend
-├── server/          # Express backend
-├── docs/            # Documentation
-├── scripts/         # Utility scripts
+├── client/              # React + Vite frontend
+│   ├── src/
+│   │   ├── components/  # Reusable components
+│   │   ├── pages/       # Page components
+│   │   ├── routes/      # Routing setup
+│   │   ├── services/    # API service
+│   │   └── styles/      # CSS
+│   └── package.json
+│
+├── server/              # Node.js + Express backend
+│   ├── src/
+│   │   ├── controllers/ # Route handlers
+│   │   ├── models/      # Database schemas
+│   │   ├── routes/      # API routes
+│   │   ├── services/    # Business logic
+│   │   └── middleware/  # Custom middleware
+│   └── package.json
+│
 └── README.md
 ```
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18+)
-- MongoDB (running locally or Atlas URI)
-- OpenAI API Key (for AI features)
-
-### Backend Setup
-
-```bash
-cd server
-npm install
-# Create .env file (see .env.example)
-npm run dev
-```
-
-Server runs on `http://localhost:5000`
-
-### Frontend Setup
-
-```bash
-cd client
-npm install
-npm run dev
-```
-
-App runs on `http://localhost:5173`
-
-## User Roles
-
-- **Student** – Access AI tutor, join study groups, connect with mentors
-- **Mentor** – Provide mentorship, chat with students
-- **Counselor** – Provide mental health support sessions
-- **Admin** – Manage platform, users, and content
-
-## Features
-
-- 🤖 AI-Powered Tutoring & Resource Recommendations
-- 👨‍🏫 Mentor Directory & Session Booking
-- 💬 Community Forum & Study Groups
-- 🧠 Mental Health Support & Counseling
-- 💼 Internship Board
-- 🔔 Real-Time Notifications & Chat
-- 📊 Analytics Dashboard
-- 🔐 JWT Authentication with Role-Based Access
-
 ## API Endpoints
 
-| Prefix                | Module        |
-|-----------------------|---------------|
-| `/api/auth`           | Authentication|
-| `/api/users`          | Users         |
-| `/api/mentors`        | Mentors       |
-| `/api/mentorship`     | Mentorship    |
-| `/api/community`      | Community     |
-| `/api/counseling`     | Counseling    |
-| `/api/internships`    | Internships   |
-| `/api/ai`             | AI Services   |
-| `/api/notifications`  | Notifications |
-| `/api/analytics`      | Analytics     |
-| `/api/admin`          | Admin         |
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/auth/register` | Register new user |
+| `POST /api/auth/login` | User login |
+| `GET /api/auth/me` | Get current user |
+| `GET /api/mentors` | List all mentors |
+| `POST /api/mentorship/request` | Request mentorship |
+| `GET /api/community/posts` | Get forum posts |
+| `POST /api/community/posts` | Create new post |
+| `GET /api/internships` | List internships |
+| `POST /api/ai/chat` | Chat with AI tutor |
 
-## License
+## Next Steps
 
-MIT
+1. ✅ Install MongoDB
+2. ✅ Install dependencies in both folders
+3. ✅ Start the server: `npm run dev` (in `server/` folder)
+4. ✅ Start the client: `npm run dev` (in `client/` folder)
+5. ✅ Open `http://localhost:5173` in your browser
+6. ✅ Register a new account or login
+7. 🔄 Explore the features
+
+## Support
+
+For issues or questions:
+- Check the main README.md
+- Ensure all prerequisites are installed
+- Verify MongoDB is running
+- Check browser console for frontend errors
+- Check terminal output for backend errors
+
+---
+
+**Status:** Ready to deploy with proper configuration ✨
