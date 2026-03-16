@@ -1,9 +1,6 @@
-const Internship = require('../models/Internship');
-const Company = require('../models/Company');
-const User = require('../models/User');
-const StudentProfile = require('../models/StudentProfile');
-const Application = require('../models/Application');
-const SavedInternship = require('../models/SavedInternship');
+const Internship = require('./internship.model');
+const Company = require('../companies/company.model');
+const User = require('../../models/User');
 
 // @desc    Get all internships
 const getInternships = async (req, res) => {
@@ -90,14 +87,14 @@ const filterInternships = async (req, res) => {
 // @desc    Get recommended internships
 const getRecommendedInternships = async (req, res) => {
   try {
-    const studentProfile = await StudentProfile.findOne({ user: req.user._id });
-    if (!studentProfile || !studentProfile.interests || studentProfile.interests.length === 0) {
-      return res.status(400).json({ message: 'User interests not found' });
+    const user = await User.findById(req.user._id).populate('studentProfile');
+    if (!user || !user.studentProfile || !user.studentProfile.skills) {
+      return res.status(400).json({ message: 'User skills not found' });
     }
 
-    const userInterests = studentProfile.interests;
+    const userSkills = user.studentProfile.skills;
     const internships = await Internship.find({
-      skillsRequired: { $in: userInterests }
+      skillsRequired: { $in: userSkills }
     })
       .populate('companyId', 'name logo location')
       .populate('postedBy', 'name')
@@ -189,102 +186,6 @@ const deleteInternship = async (req, res) => {
   }
 };
 
-// @desc    Apply to internship
-const applyToInternship = async (req, res) => {
-  try {
-    const { internshipId, resumeURL } = req.body;
-    const userId = req.user._id;
-
-    // Check if already applied
-    const existingApplication = await Application.findOne({ userId, internshipId });
-    if (existingApplication) {
-      return res.status(400).json({ message: 'Already applied to this internship' });
-    }
-
-    const application = new Application({
-      userId,
-      internshipId,
-      resumeURL
-    });
-
-    await application.save();
-
-    // Increment applicants count
-    await Internship.findByIdAndUpdate(internshipId, { $inc: { applicantsCount: 1 } });
-
-    res.status(201).json(application);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Get user's applications
-const getUserApplications = async (req, res) => {
-  try {
-    const applications = await Application.find({ userId: req.user._id })
-      .populate('internshipId')
-      .sort({ appliedAt: -1 });
-
-    res.json(applications);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Save internship
-const saveInternship = async (req, res) => {
-  try {
-    const { internshipId } = req.body;
-    const userId = req.user._id;
-
-    // Check if already saved
-    const existing = await SavedInternship.findOne({ userId, internshipId });
-    if (existing) {
-      return res.status(400).json({ message: 'Internship already saved' });
-    }
-
-    const saved = new SavedInternship({
-      userId,
-      internshipId
-    });
-
-    await saved.save();
-    res.status(201).json(saved);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Get user's saved internships
-const getSavedInternships = async (req, res) => {
-  try {
-    const saved = await SavedInternship.find({ userId: req.user._id })
-      .populate('internshipId')
-      .sort({ savedAt: -1 });
-
-    res.json(saved);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Unsave internship
-const unsaveInternship = async (req, res) => {
-  try {
-    const saved = await SavedInternship.findById(req.params.id);
-    if (!saved) return res.status(404).json({ message: 'Saved internship not found' });
-
-    if (saved.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    await SavedInternship.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Internship unsaved' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
 module.exports = {
   getInternships,
   getInternshipById,
@@ -293,10 +194,5 @@ module.exports = {
   getInternshipsByDeadlines,
   createInternship,
   updateInternship,
-  deleteInternship,
-  applyToInternship,
-  getUserApplications,
-  saveInternship,
-  getSavedInternships,
-  unsaveInternship
+  deleteInternship
 };

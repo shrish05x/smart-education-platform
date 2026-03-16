@@ -8,14 +8,9 @@ const {
   getInternshipsByDeadlines,
   createInternship,
   updateInternship,
-  deleteInternship,
-  applyToInternship,
-  getUserApplications,
-  saveInternship,
-  getSavedInternships,
-  unsaveInternship
-} = require('../controllers/internship.controller');
-const { protect } = require('../middlewares/auth.middleware');
+  deleteInternship
+} = require('./internship.controller');
+const { protect } = require('../../middlewares/auth.middleware');
 
 router.get('/', getInternships);
 router.get('/filter', filterInternships);
@@ -26,12 +21,5 @@ router.get('/:id', getInternshipById);
 router.post('/', protect, createInternship);
 router.put('/:id', protect, updateInternship);
 router.delete('/:id', protect, deleteInternship);
-
-router.post('/apply', protect, applyToInternship);
-router.get('/applications', protect, getUserApplications);
-
-router.post('/save', protect, saveInternship);
-router.get('/saved', protect, getSavedInternships);
-router.delete('/saved/:id', protect, unsaveInternship);
 
 module.exports = router;
