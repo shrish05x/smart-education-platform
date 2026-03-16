@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import ChatWindow from '../features/ai-assistant/components/ChatWindow';
+import ChatWindow from '../components/chat/ChatWindow';
 
 const AiAssistant = () => {
   return (
