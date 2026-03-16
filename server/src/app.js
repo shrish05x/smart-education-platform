@@ -13,11 +13,13 @@ const mentorshipRoutes = require('./routes/mentorship.routes');
 const communityRoutes = require('./routes/community.routes');
 const counselingRoutes = require('./routes/counseling.routes');
 const internshipRoutes = require('./routes/internship.routes');
+const companyRoutes = require('./routes/company.routes');
 const aiRoutes = require('./routes/ai.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const opportunityRoutes = require('./routes/opportunity.routes');
 
 const app = express();
 
@@ -62,11 +64,13 @@ app.use('/api/mentorship', mentorshipRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/counseling', counselingRoutes);
 app.use('/api/internships', internshipRoutes);
+app.use('/api/companies', companyRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/opportunities', opportunityRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

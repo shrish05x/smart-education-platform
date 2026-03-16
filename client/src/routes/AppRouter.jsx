@@ -15,7 +15,14 @@ import AiAssistant from '../pages/AiAssistant';
 import MentorDirectory from '../pages/MentorDirectory';
 import CommunityForum from '../pages/CommunityForum';
 import MentalHealthSupport from '../pages/MentalHealthSupport';
-import InternshipBoard from '../pages/InternshipBoard';
+import InternshipsPage from '../pages/InternshipsPage';
+import InternshipDetails from '../pages/InternshipDetails';
+import ApplyInternship from '../pages/ApplyInternship';
+import SavedInternships from '../pages/SavedInternships';
+import MyApplications from '../pages/MyApplications';
+import RecommendedInternships from '../pages/RecommendedInternships';
+import CompaniesPage from '../pages/CompaniesPage';
+import CompanyProfile from '../pages/CompanyProfile';
 import Profile from '../pages/Profile';
 import AdminPanel from '../pages/AdminPanel';
 
@@ -41,7 +48,14 @@ const AppRouter = () => {
         <Route path="/mentors" element={<MentorDirectory />} />
         <Route path="/community" element={<CommunityForum />} />
         <Route path="/mental-health" element={<MentalHealthSupport />} />
-        <Route path="/internships" element={<InternshipBoard />} />
+        <Route path="/internships" element={<InternshipsPage />} />
+        <Route path="/internships/:id" element={<InternshipDetails />} />
+        <Route path="/internships/apply/:id" element={<ApplyInternship />} />
+        <Route path="/recommended-internships" element={<RecommendedInternships />} />
+        <Route path="/saved-internships" element={<SavedInternships />} />
+        <Route path="/my-applications" element={<MyApplications />} />
+        <Route path="/companies" element={<CompaniesPage />} />
+        <Route path="/companies/:id" element={<CompanyProfile />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPanel /></ProtectedRoute>} />
       </Route>
