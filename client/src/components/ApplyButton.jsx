@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 
 const ApplyButton = ({ internshipId }) => {
   const [loading, setLoading] = useState(false);
@@ -9,7 +9,7 @@ const ApplyButton = ({ internshipId }) => {
   const handleApply = async () => {
     setLoading(true);
     try {
-      await axios.post('/api/internships/apply', { internshipId });
+      await api.post('/internships/apply', { internshipId });
       alert('Application submitted successfully!');
     } catch (error) {
       if (error.response?.status === 400) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import InternshipCard from '../components/InternshipCard';
 
 const SavedInternships = () => {
@@ -12,7 +12,7 @@ const SavedInternships = () => {
 
   const fetchSavedInternships = async () => {
     try {
-      const response = await axios.get('/api/internships/saved');
+      const response = await api.get('/internships/saved');
       setSavedInternships(response.data);
     } catch (error) {
       console.error('Error fetching saved internships:', error);

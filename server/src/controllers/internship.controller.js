@@ -9,17 +9,36 @@ const SavedInternship = require('../models/SavedInternship');
 const getInternships = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const internships = await Internship.find()
+    // Build filter query
+    const query = {};
+    if (req.query.skills) {
+      query.skillsRequired = { $in: req.query.skills.split(',').map(s => s.trim()) };
+    }
+    if (req.query.location) {
+      query.location = { $regex: req.query.location, $options: 'i' };
+    }
+    if (req.query.type) {
+      query.type = req.query.type;
+    }
+    if (req.query.search) {
+      query.$or = [
+        { role: { $regex: req.query.search, $options: 'i' } },
+        { company: { $regex: req.query.search, $options: 'i' } },
+        { description: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const internships = await Internship.find(query)
       .populate('companyId', 'name logo location')
       .populate('postedBy', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const total = await Internship.countDocuments();
+    const total = await Internship.countDocuments(query);
 
     res.json({
       internships,
@@ -132,9 +151,10 @@ const getInternshipsByDeadlines = async (req, res) => {
 // @desc    Create internship
 const createInternship = async (req, res) => {
   try {
-    const { companyId, role, description, requirements, skillsRequired, location, stipend, duration, type, deadline } = req.body;
+    const { company, companyId, role, description, requirements, skillsRequired, location, stipend, duration, type, deadline } = req.body;
 
     const internship = new Internship({
+      company: company || 'Unknown Company',
       companyId,
       role,
       description,
@@ -161,7 +181,7 @@ const updateInternship = async (req, res) => {
     const internship = await Internship.findById(req.params.id);
     if (!internship) return res.status(404).json({ message: 'Internship not found' });
 
-    if (internship.postedBy.toString() !== req.user._id.toString()) {
+    if (internship.postedBy && internship.postedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
@@ -178,7 +198,7 @@ const deleteInternship = async (req, res) => {
     const internship = await Internship.findById(req.params.id);
     if (!internship) return res.status(404).json({ message: 'Internship not found' });
 
-    if (internship.postedBy.toString() !== req.user._id.toString()) {
+    if (internship.postedBy && internship.postedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
@@ -285,6 +305,92 @@ const unsaveInternship = async (req, res) => {
   }
 };
 
+// @desc    Seed demo internships
+const seedInternships = async (req, res) => {
+  try {
+    const demoInternships = [
+      {
+        company: 'Google',
+        role: 'Software Engineering Intern',
+        description: 'Join Google\'s engineering team to work on cutting-edge products used by billions. You\'ll collaborate with experienced engineers on real projects, participate in code reviews, and contribute to production systems.',
+        requirements: ['Currently pursuing B.Tech/M.Tech in CS or related field', 'Strong foundations in data structures and algorithms', 'Experience with at least one programming language (Python, Java, C++)', 'Good problem-solving skills'],
+        skillsRequired: ['Python', 'Java', 'Data Structures', 'Algorithms', 'System Design'],
+        location: 'Bangalore',
+        stipend: 80000,
+        duration: '3 months',
+        type: 'hybrid',
+        deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      },
+      {
+        company: 'Microsoft',
+        role: 'Frontend Developer Intern',
+        description: 'Build modern web experiences for Microsoft 365 products. Work with React, TypeScript, and Fluent UI to create accessible, performant interfaces used by millions of enterprise customers worldwide.',
+        requirements: ['Pursuing degree in Computer Science or related field', 'Strong knowledge of HTML, CSS, JavaScript', 'Familiarity with React or similar frameworks', 'Understanding of responsive design principles'],
+        skillsRequired: ['React', 'TypeScript', 'JavaScript', 'CSS', 'HTML'],
+        location: 'Hyderabad',
+        stipend: 75000,
+        duration: '6 months',
+        type: 'onsite',
+        deadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000)
+      },
+      {
+        company: 'Amazon',
+        role: 'Data Science Intern',
+        description: 'Apply machine learning and statistical analysis to solve real-world problems at Amazon scale. You\'ll work with massive datasets, build predictive models, and directly impact customer experience and business outcomes.',
+        requirements: ['Strong background in statistics and mathematics', 'Experience with Python and data science libraries', 'Knowledge of machine learning algorithms', 'Ability to communicate findings effectively'],
+        skillsRequired: ['Python', 'Machine Learning', 'SQL', 'TensorFlow', 'Statistics'],
+        location: 'Remote',
+        stipend: 70000,
+        duration: '3 months',
+        type: 'remote',
+        deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+      },
+      {
+        company: 'Flipkart',
+        role: 'Backend Developer Intern',
+        description: 'Work on microservices powering India\'s largest e-commerce platform. Design and implement scalable APIs, optimize database queries, and ensure high availability during major sale events.',
+        requirements: ['Knowledge of Node.js or Java/Spring Boot', 'Understanding of RESTful API design', 'Familiarity with databases (SQL/NoSQL)', 'Basic understanding of cloud services'],
+        skillsRequired: ['Node.js', 'MongoDB', 'REST API', 'Docker', 'Express.js'],
+        location: 'Bangalore',
+        stipend: 50000,
+        duration: '4 months',
+        type: 'onsite',
+        deadline: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000)
+      },
+      {
+        company: 'Razorpay',
+        role: 'Full Stack Developer Intern',
+        description: 'Build end-to-end features for India\'s leading payment gateway. Work across the stack from React frontends to Go/Node.js backends, handling payment flows serving millions of transactions.',
+        requirements: ['Proficiency in JavaScript/TypeScript', 'Experience with React and Node.js', 'Understanding of payment systems (bonus)', 'Good debugging and problem-solving skills'],
+        skillsRequired: ['React', 'Node.js', 'JavaScript', 'MongoDB', 'Git'],
+        location: 'Bangalore',
+        stipend: 60000,
+        duration: '6 months',
+        type: 'hybrid',
+        deadline: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000)
+      },
+      {
+        company: 'Zomato',
+        role: 'UI/UX Design Intern',
+        description: 'Design delightful food ordering experiences for millions of users. Create wireframes, prototypes, and high-fidelity designs while collaborating closely with product managers and engineers.',
+        requirements: ['Portfolio demonstrating UI/UX design skills', 'Proficiency in Figma or Adobe XD', 'Understanding of design systems', 'Knowledge of user research methods'],
+        skillsRequired: ['Figma', 'UI Design', 'UX Research', 'Prototyping', 'Design Systems'],
+        location: 'Delhi',
+        stipend: 40000,
+        duration: '3 months',
+        type: 'hybrid',
+        deadline: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+      }
+    ];
+
+    await Internship.deleteMany({});
+    const created = await Internship.insertMany(demoInternships);
+    res.status(201).json({ message: `Seeded ${created.length} internships`, internships: created });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getInternships,
   getInternshipById,
@@ -298,5 +404,6 @@ module.exports = {
   getUserApplications,
   saveInternship,
   getSavedInternships,
-  unsaveInternship
+  unsaveInternship,
+  seedInternships
 };

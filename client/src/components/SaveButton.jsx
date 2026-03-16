@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const SaveButton = ({ internshipId }) => {
   const [saved, setSaved] = useState(false);
@@ -11,10 +11,10 @@ const SaveButton = ({ internshipId }) => {
       if (saved) {
         // Unsave logic - but since we don't have the saved id, perhaps fetch saved and find
         // For simplicity, just toggle
-        await axios.post('/api/internships/save', { internshipId });
+        await api.post('/internships/save', { internshipId });
         setSaved(false);
       } else {
-        await axios.post('/api/internships/save', { internshipId });
+        await api.post('/internships/save', { internshipId });
         setSaved(true);
       }
     } catch (error) {
