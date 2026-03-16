@@ -3,14 +3,9 @@ node_modules
 client/node_modules
 server/node_modules
 dist
-buildCreate a complete authentication and user management system for the Student Success Platform.
+build/
+.env
+.DS_Store
 
-Tech stack:
-Node.js
-
-
-
-
-
-
-Implement login state management using React Context or React Query.
+# Ignore uploaded resources
+server/uploads/

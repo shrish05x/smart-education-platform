@@ -18,6 +18,9 @@ import MentalHealthSupport from '../pages/MentalHealthSupport';
 import InternshipBoard from '../pages/InternshipBoard';
 import Profile from '../pages/Profile';
 import AdminPanel from '../pages/AdminPanel';
+import ResourceLibrary from '../pages/ResourceLibrary';
+import ResourceUpload from '../pages/ResourceUpload';
+import ResourceDetail from '../pages/ResourceDetail';
 
 const AppRouter = () => {
   return (
@@ -44,6 +47,11 @@ const AppRouter = () => {
         <Route path="/internships" element={<InternshipBoard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPanel /></ProtectedRoute>} />
+        
+        {/* Resource Module Routes */}
+        <Route path="/resources" element={<ResourceLibrary />} />
+        <Route path="/resources/upload" element={<ResourceUpload />} />
+        <Route path="/resources/:id" element={<ResourceDetail />} />
       </Route>
     </Routes>
   );
