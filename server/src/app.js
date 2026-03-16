@@ -20,6 +20,7 @@ const analyticsRoutes = require('./routes/analytics.routes');
 const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const opportunityRoutes = require('./routes/opportunity.routes');
+const resourceRoutes = require('./routes/resource.routes');
 
 const app = express();
 
@@ -71,6 +72,10 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/opportunities', opportunityRoutes);
+app.use('/api/resources', resourceRoutes);
+
+// Server static files (uploaded resources, etc)
+app.use('/uploads', express.static('uploads'));
 
 // Error handling middleware
 app.use(errorHandler);
