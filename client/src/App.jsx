@@ -1,7 +1,13 @@
-import AppRouter from './routes/AppRouter'
+import AppRouter from './routes/AppRouter';
+import IncomingCallModal from './components/mental-health/IncomingCallModal';
 
 function App() {
-  return <AppRouter />
+  return (
+    <>
+      <IncomingCallModal />
+      <AppRouter />
+    </>
+  );
 }
 
-export default App
+export default App;
