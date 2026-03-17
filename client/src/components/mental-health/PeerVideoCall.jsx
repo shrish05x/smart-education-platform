@@ -1,24 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useCall } from './../../context/CallContext';
 
 const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
-  const { startOutgoingCall, activeCall, setActiveCall, endCall: contextEndCall } = useCall();
+  const { startOutgoingCall, activeCall, setActiveCall, endCall: contextEndCall, socket } = useCall();
   const [callStatus, setCallStatus] = useState('idle'); // idle, connecting, active, ended, ai-fallback
   const [callDuration, setCallDuration] = useState(0);
   const [emailInput, setEmailInput] = useState(initialPartner?.email || '');
   const [partnerDetails, setPartnerDetails] = useState(initialPartner || { name: 'Friend / Mentor', isAI: false });
 
-  // If a call is answered from incoming modal while here, sync state
+  // WebRTC & Media State
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  const peerConnectionRef = useRef(null);
+  const localStreamRef = useRef(null);
+  
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+
+  // Initialize Media and WebRTC if we're active
   useEffect(() => {
-    if (activeCall && activeCall.status === 'active') {
+    if (callStatus === 'active' && !partnerDetails.isAI) {
+      initializeMediaAndWebRTC();
+    }
+    
+    // Cleanup media when leaving
+    return () => {
+      cleanupMedia();
+    };
+  }, [callStatus]);
+
+  useEffect(() => {
+    if (activeCall && activeCall.status === 'active' && callStatus === 'idle') {
       setPartnerDetails({
         name: activeCall.partnerName,
         email: activeCall.partnerEmail,
         avatar: activeCall.partnerAvatar,
-        isAI: activeCall.isAI
+        isAI: activeCall.isAI,
+        sessionId: activeCall.sessionId
       });
       setCallStatus('active');
+      
+      // If we are answering, we'll initialize WebRTC inside the other useEffect, 
+      // but we need to set a flag to know we should send an answer
+      if (activeCall.isAnswering) {
+         // handle answer logic later in initializeMediaAndWebRTC
+      }
     }
   }, [activeCall]);
 
@@ -40,6 +67,133 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
+  };
+
+  const configuration = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  };
+
+  const cleanupMedia = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+    }
+  };
+
+  const initializeMediaAndWebRTC = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
+      
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      setupWebRTC(stream);
+
+    } catch (error) {
+      console.error("Error accessing media devices.", error);
+      alert("Could not access camera or microphone.");
+    }
+  };
+
+  const setupWebRTC = async (stream) => {
+    const peerConnection = new RTCPeerConnection(configuration);
+    peerConnectionRef.current = peerConnection;
+
+    // Add local stream tracks to peer connection
+    stream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, stream);
+    });
+
+    // Handle incoming remote stream
+    peerConnection.ontrack = (event) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    // Handle ICE candidates
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate && socket && partnerDetails.sessionId) {
+        socket.emit('video-call:ice-candidate', {
+          candidate: event.candidate,
+          sessionId: partnerDetails.sessionId
+        });
+      }
+    };
+
+    // Signaling events
+    if (socket) {
+      socket.on('video-call:answer', async (data) => {
+        if (!peerConnection.currentRemoteDescription && data.answer) {
+          try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+          } catch (e) {
+            console.error("Error setting remote description", e);
+          }
+        }
+      });
+
+      socket.on('video-call:ice-candidate', async (data) => {
+        if (data.candidate && peerConnection.remoteDescription) {
+          try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+          } catch (e) {
+            console.error("Error adding ice candidate", e);
+          }
+        }
+      });
+      
+      socket.on('call:accepted', async (data) => {
+         // The other side accepted our call visually and might have sent an answer
+         if (data.answer && peerConnection.signalingState !== 'stable') {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+         }
+      });
+      
+      socket.on('call:rejected', () => {
+         handleEndCall();
+         alert("Call was declined.");
+      });
+      
+      socket.on('video-call:end', () => {
+         handleEndCall();
+      });
+    }
+
+    // If we are initiating the call (caller)
+    if (!activeCall?.isAnswering) {
+      try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        // The offer gets sent through startOutgoingCall context logic via socket
+        // but we can re-emit here if needed.
+      } catch (err) {
+        console.error(err);
+      }
+    } else if (activeCall?.offer) {
+      // If we are answering the call (callee)
+      try {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(activeCall.offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        if (socket) {
+          socket.emit('call:accepted', {
+             sessionId: activeCall.sessionId,
+             answer: answer
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
   };
 
   const handleStartCall = async (emailOverride) => {
@@ -71,6 +225,12 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
 
   const handleEndCall = () => {
     setCallStatus('ended');
+    
+    if (socket && partnerDetails.sessionId) {
+       socket.emit('video-call:end', { sessionId: partnerDetails.sessionId });
+    }
+    
+    cleanupMedia();
     contextEndCall();
     setTimeout(() => {
       setCallStatus('idle');
@@ -194,10 +354,11 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
                  </div>
                </div>
             ) : (
-              <img 
-                src={partnerDetails.avatar || `https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=800`} 
-                alt="Partner Video" 
-                className="w-full h-full object-cover opacity-80"
+              <video 
+                ref={remoteVideoRef}
+                autoPlay 
+                playsInline
+                className="w-full h-full object-cover bg-black"
               />
             )}
           </motion.div>
@@ -205,23 +366,58 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
       </div>
 
       {/* User Camera Picture-in-Picture */}
-      <div className="absolute bottom-28 right-6 w-48 h-64 bg-gray-800 rounded-xl border-2 border-gray-700 shadow-2xl overflow-hidden z-20 flex items-center justify-center">
-        {/* Placeholder for actual user camera */}
-        <div className="text-gray-500 flex flex-col items-center gap-2">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-          <span className="text-xs font-medium">Your Camera</span>
-        </div>
+      <div className="absolute bottom-28 right-6 w-32 h-44 sm:w-48 sm:h-64 bg-black rounded-xl border-2 border-emerald-500 shadow-2xl overflow-hidden z-20 flex items-center justify-center">
+        {!partnerDetails.isAI && callStatus === 'active' ? (
+           <video 
+             ref={localVideoRef}
+             autoPlay 
+             playsInline 
+             muted 
+             className={`w-full h-full object-cover transform -scale-x-100 ${isVideoOff ? 'opacity-0' : 'opacity-100'}`}
+           />
+        ) : (
+          <div className="text-gray-500 flex flex-col items-center gap-2">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <span className="text-xs font-medium text-center px-2">Waiting for camera...</span>
+          </div>
+        )}
       </div>
 
       {/* Bottom Controls */}
-      <div className="h-24 bg-gray-900/90 backdrop-blur-md border-t border-gray-800 flex items-center justify-center gap-6 px-6 z-20">
-        <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center text-white transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      <div className="h-24 bg-gray-900/90 backdrop-blur-md border-t border-gray-800 flex items-center justify-center gap-4 sm:gap-6 px-4 z-20">
+        <button 
+          onClick={() => {
+            setIsMuted(!isMuted);
+            if(localStreamRef.current) {
+              localStreamRef.current.getAudioTracks().forEach(t => t.enabled = !t.enabled);
+            }
+          }}
+          className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-800 hover:bg-gray-700 border border-gray-700'}`}
+          title={isMuted ? "Unmute Audio" : "Mute Audio"}
+        >
+          {isMuted ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          )}
         </button>
-        <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center text-white transition-colors">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <button 
+          onClick={() => {
+            setIsVideoOff(!isVideoOff);
+            if(localStreamRef.current) {
+              localStreamRef.current.getVideoTracks().forEach(t => t.enabled = !t.enabled);
+            }
+          }}
+          className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-colors ${isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-800 hover:bg-gray-700 border border-gray-700'}`}
+          title={isVideoOff ? "Turn On Camera" : "Turn Off Camera"}
+        >
+          {isVideoOff ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          )}
         </button>
-        <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center text-white transition-colors">
+        <button className="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center text-white transition-colors" title="Chat">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </button>
         

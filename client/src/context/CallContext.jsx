@@ -1,13 +1,40 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import { io } from 'socket.io-client';
 
 const CallContext = createContext();
 
 export const CallProvider = ({ children }) => {
-  const { user } = useAuth();
-  const [incomingCall, setIncomingCall] = useState(null); // { callerName, callerEmail, callerAvatar }
+  const { user, token } = useAuth();
+  const [incomingCall, setIncomingCall] = useState(null); // { callerName, callerEmail, callerAvatar, ... }
   const [activeCall, setActiveCall] = useState(null);     // { partnerName, partnerEmail, isAI, ... }
   const [pendingCalls, setPendingCalls] = useState([]);   // List of missed/pending calls
+  const [socket, setSocket] = useState(null);
+  
+  // Initialize Socket.io connection when user logs in
+  useEffect(() => {
+    if (user && token) {
+      const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const newSocket = io(socketUrl, {
+        auth: { token },
+        query: { email: user.email }
+      });
+
+      setSocket(newSocket);
+
+      newSocket.on('call:incoming', (data) => {
+        // Automatically set incoming call if we aren't already in one
+        setIncomingCall({
+           ...data,
+           callerAvatar: data.callerAvatar || `https://ui-avatars.com/api/?name=${data.callerName}&background=random`
+        });
+      });
+
+      return () => {
+        newSocket.close();
+      };
+    }
+  }, [user, token]);
 
   // Simulate receiving a call from another user
   // In a real app, this would be wired up to WebSockets/WebRTC signaling
@@ -26,14 +53,26 @@ export const CallProvider = ({ children }) => {
         partnerEmail: incomingCall.callerEmail,
         partnerAvatar: incomingCall.callerAvatar,
         isAI: false,
-        status: 'active'
+        status: 'active',
+        isAnswering: true,
+        offer: incomingCall.offer,
+        sessionId: incomingCall.sessionId
       });
+      setIncomingCall(null);
       setIncomingCall(null);
     }
   };
 
   const rejectCall = () => {
     if (incomingCall) {
+      if (socket) {
+        socket.emit('call:rejected', {
+          callerEmail: incomingCall.callerEmail,
+          targetEmail: user?.email,
+          sessionId: incomingCall.sessionId
+        });
+      }
+      
       // Add to pending calls instead of just dismissing
       setPendingCalls(prev => [
         { ...incomingCall, timestamp: new Date(), id: Date.now() },
@@ -47,22 +86,30 @@ export const CallProvider = ({ children }) => {
     setActiveCall(null);
   };
 
-  const startOutgoingCall = async (email, autoStart = false) => {
-    // In our simulation, check if it's a known user, else fallback to AI or simulate ringing
-    // Here we'll simulate that we're routing the call.
-    return new Promise((resolve) => {
-      // Return a structured object that the UI components can use to set their state
-      const isAIFallback = email.includes('ai') || email.includes('bot');
-      let nameStr = email.split('@')[0];
-      nameStr = nameStr.charAt(0).toUpperCase() + nameStr.slice(1);
-      
-      resolve({
-         partnerName: isAIFallback ? 'AI Support Guide' : nameStr,
-         partnerEmail: email,
-         isAI: isAIFallback,
-         autoStart: autoStart
+  const startOutgoingCall = async (email, autoStart = false, offer = null) => {
+    const isAIFallback = email.includes('ai') || email.includes('bot');
+    let nameStr = email.split('@')[0];
+    nameStr = nameStr.charAt(0).toUpperCase() + nameStr.slice(1);
+    const sessionId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    if (!isAIFallback && socket) {
+      socket.emit('call:initiate', {
+        targetEmail: email,
+        callerName: user?.name,
+        callerEmail: user?.email,
+        callerAvatar: `https://ui-avatars.com/api/?name=${user?.name}&background=random`,
+        offer,
+        sessionId
       });
-    });
+    }
+
+    return {
+       partnerName: isAIFallback ? 'AI Support Guide' : nameStr,
+       partnerEmail: email,
+       isAI: isAIFallback,
+       autoStart,
+       sessionId
+    };
   };
 
   const clearPendingCall = (id) => {
@@ -71,6 +118,7 @@ export const CallProvider = ({ children }) => {
 
   return (
     <CallContext.Provider value={{
+      socket,
       incomingCall,
       activeCall,
       pendingCalls,

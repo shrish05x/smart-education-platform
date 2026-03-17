@@ -30,8 +30,15 @@ const initializeSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.userId}`);
 
-    // Join personal room for notifications
+    // Join personal room by ID for notifications
     socket.join(socket.userId);
+    
+    // Allow users to also join a room by their email if provided during connection query
+    const email = socket.handshake.query.email;
+    if (email) {
+      socket.join(email);
+      console.log(`User ${socket.userId} joined email room: ${email}`);
+    }
 
     // Mentor-Student chat
     socket.on('join:mentorship', (sessionId) => {
@@ -111,6 +118,36 @@ const initializeSocket = (server) => {
     socket.on('video-call:end', (data) => {
       socket.to(`video-call:${data.sessionId}`).emit('video-call:end', {
         senderId: socket.userId,
+      });
+    });
+
+    // Global Call Routing (making it ring for the other user)
+    socket.on('call:initiate', (data) => {
+      // route by email or ID. We'll use the 'targetEmail' room
+      io.to(data.targetEmail).emit('call:incoming', {
+        callerId: socket.userId,
+        callerName: data.callerName,
+        callerEmail: data.callerEmail,
+        callerAvatar: data.callerAvatar,
+        offer: data.offer, // WebRTC initial offer
+        sessionId: data.sessionId, // Unique ID for this call to create a room
+      });
+      console.log(`Initiated call to ${data.targetEmail} from ${data.callerName}`);
+    });
+
+    socket.on('call:accepted', (data) => {
+      // Notify the caller that the call was accepted
+      socket.to(`video-call:${data.sessionId}`).emit('call:accepted', {
+        responderId: socket.userId,
+        answer: data.answer // WebRTC answer
+      });
+    });
+
+    socket.on('call:rejected', (data) => {
+      // Route by callerEmail so caller knows it was rejected
+      io.to(data.callerEmail).emit('call:rejected', {
+        targetEmail: data.targetEmail,
+        sessionId: data.sessionId
       });
     });
 
