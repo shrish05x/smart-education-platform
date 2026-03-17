@@ -81,6 +81,39 @@ const initializeSocket = (server) => {
       });
     });
 
+    // Video Call Signaling
+    socket.on('join:video-call', (sessionId) => {
+      socket.join(`video-call:${sessionId}`);
+      console.log(`User ${socket.userId} joined video call room: ${sessionId}`);
+    });
+
+    socket.on('video-call:offer', (data) => {
+      socket.to(`video-call:${data.sessionId}`).emit('video-call:offer', {
+        offer: data.offer,
+        senderId: socket.userId,
+      });
+    });
+
+    socket.on('video-call:answer', (data) => {
+      socket.to(`video-call:${data.sessionId}`).emit('video-call:answer', {
+        answer: data.answer,
+        senderId: socket.userId,
+      });
+    });
+
+    socket.on('video-call:ice-candidate', (data) => {
+      socket.to(`video-call:${data.sessionId}`).emit('video-call:ice-candidate', {
+        candidate: data.candidate,
+        senderId: socket.userId,
+      });
+    });
+
+    socket.on('video-call:end', (data) => {
+      socket.to(`video-call:${data.sessionId}`).emit('video-call:end', {
+        senderId: socket.userId,
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId}`);
     });

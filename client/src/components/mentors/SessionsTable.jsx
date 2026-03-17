@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import StatusBadge from './StatusBadge';
+import VideoCall from './VideoCall';
 
 const SessionsTable = ({ sessions }) => {
+  const [activeVideoCall, setActiveVideoCall] = useState(null);
   if (!sessions || sessions.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm">
@@ -36,6 +38,7 @@ const SessionsTable = ({ sessions }) => {
               <th className="py-4 px-6 font-semibold text-sm text-gray-600 tracking-wider">Duration</th>
               <th className="py-4 px-6 font-semibold text-sm text-gray-600 tracking-wider">Status</th>
               <th className="py-4 px-6 font-semibold text-sm text-gray-600 tracking-wider flex-1">Goals / Notes</th>
+              <th className="py-4 px-6 font-semibold text-sm text-gray-600 tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -79,12 +82,32 @@ const SessionsTable = ({ sessions }) => {
                       {session.requestMessage || session.notes || '-'}
                     </p>
                   </td>
+                  <td className="py-4 px-6">
+                    {session.status === 'accepted' && !past && (
+                      <button
+                        onClick={() => setActiveVideoCall(session._id)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        Join Call
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {activeVideoCall && (
+        <VideoCall
+          sessionId={activeVideoCall}
+          onClose={() => setActiveVideoCall(null)}
+        />
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ import MentorProfileDetail from '../pages/MentorProfileDetail';
 import MentorshipRequest from '../pages/MentorshipRequest';
 import SessionsDashboard from '../pages/SessionsDashboard';
 import CommunityForum from '../pages/CommunityForum';
+import MeetupsNearYou from '../pages/MeetupsNearYou';
 import MentalHealthSupport from '../pages/MentalHealthSupport';
 import InternshipsPage from '../pages/InternshipsPage';
 import InternshipDetails from '../pages/InternshipDetails';
@@ -58,6 +59,7 @@ const AppRouter = () => {
         <Route path="/mentorship/sessions" element={<SessionsDashboard />} />
         
         <Route path="/community" element={<CommunityForum />} />
+        <Route path="/meetups" element={<MeetupsNearYou />} />
         <Route path="/mental-health" element={<MentalHealthSupport />} />
         <Route path="/internships" element={<InternshipsPage />} />
         <Route path="/internships/:id" element={<InternshipDetails />} />
