@@ -1,15 +1,17 @@
 import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { THEME_CSS } from '../theme';
 
-const MainLayout = () => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Outlet />
-      </main>
-    </div>
-  );
-};
+const MainLayout = () => (
+  <div style={{ minHeight:'100vh', background:'#0D0C1D', color:'#fff', overflowX:'hidden' }}>
+    <style>{THEME_CSS}</style>
+    <div className="god-ray-l" />
+    <div className="god-ray-r" />
+    <Navbar />
+    <main style={{ paddingTop:80 }}>
+      <Outlet />
+    </main>
+  </div>
+);
 
 export default MainLayout;

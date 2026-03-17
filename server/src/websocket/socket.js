@@ -2,6 +2,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 
 let io;
+let waitingLounge = []; // Store socket IDs for random matching
 
 const initializeSocket = (server) => {
   io = new Server(server, {
@@ -30,7 +31,7 @@ const initializeSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.userId}`);
 
-    // Join personal room for notifications
+    // Join personal room by ID for notifications and direct calls
     socket.join(socket.userId);
 
     // Mentor-Student chat
@@ -81,36 +82,59 @@ const initializeSocket = (server) => {
       });
     });
 
-    // Video Call Signaling
-    socket.on('join:video-call', (sessionId) => {
-      socket.join(`video-call:${sessionId}`);
-      console.log(`User ${socket.userId} joined video call room: ${sessionId}`);
+    // Video Call Signaling (Room Code Based)
+    socket.on('join:video-call', (roomCode) => {
+      socket.join(roomCode);
+      console.log(`User ${socket.userId} joined video call room: ${roomCode}`);
     });
 
     socket.on('video-call:offer', (data) => {
-      socket.to(`video-call:${data.sessionId}`).emit('video-call:offer', {
-        offer: data.offer,
-        senderId: socket.userId,
-      });
+      // Broadcast the offer to the specific room code
+      socket.to(data.roomCode).emit('video-call:offer', data.offer);
     });
 
     socket.on('video-call:answer', (data) => {
-      socket.to(`video-call:${data.sessionId}`).emit('video-call:answer', {
-        answer: data.answer,
-        senderId: socket.userId,
-      });
+      // Broadcast the answer to the specific room code
+      socket.to(data.roomCode).emit('video-call:answer', data.answer);
     });
 
     socket.on('video-call:ice-candidate', (data) => {
-      socket.to(`video-call:${data.sessionId}`).emit('video-call:ice-candidate', {
-        candidate: data.candidate,
-        senderId: socket.userId,
-      });
+      // Broadcast ICE candidates to the specific room code
+      socket.to(data.roomCode).emit('video-call:ice-candidate', data.candidate);
     });
 
     socket.on('video-call:end', (data) => {
       socket.to(`video-call:${data.sessionId}`).emit('video-call:end', {
         senderId: socket.userId,
+      });
+    });
+
+    // Global Call Routing (making it ring for the other user)
+    socket.on('call:initiate', (data) => {
+      // Route strictly by MongoDB User ID
+      io.to(data.targetId).emit('call:incoming', {
+        callerId: socket.userId,
+        callerName: data.callerName,
+        callerAvatar: data.callerAvatar,
+        offer: data.offer, // WebRTC initial offer
+        sessionId: data.sessionId, // Unique ID for this call to create a room
+      });
+      console.log(`Initiated call to User ID ${data.targetId} from User ID ${socket.userId}`);
+    });
+
+    socket.on('call:accepted', (data) => {
+      // Notify the caller that the call was accepted
+      socket.to(`video-call:${data.sessionId}`).emit('call:accepted', {
+        responderId: socket.userId,
+        answer: data.answer // WebRTC answer
+      });
+    });
+
+    socket.on('call:rejected', (data) => {
+      // Route by callerId so caller knows it was rejected
+      io.to(data.callerId).emit('call:rejected', {
+        targetId: data.targetId,
+        sessionId: data.sessionId
       });
     });
 

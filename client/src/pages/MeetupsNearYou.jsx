@@ -1,234 +1,118 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
+const T = { purple:'#AC6AFF', gold:'#FFC876', coral:'#FF776F', lime:'#7ADB78', blue:'#858DFF', pink:'#FF98E2' };
+
+const TYPE_CLR = { Coding:T.blue, Discussion:T.purple, Networking:T.gold, Study:T.lime };
+
 const MOCK_MEETUPS = [
-  {
-    id: 1,
-    title: 'Full-Stack Developer Hackathon',
-    area: 'Tech Hub Downtown',
-    distance: '2.4 km',
-    type: 'Coding',
-    date: 'Today, 6:00 PM',
-    attendees: 34,
-    hasGaming: true,
-    hasChallenges: true,
-    isInstant: true,
-    image: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400',
-    description: 'Join us for an evening of intense coding, pizza, and networking. Bring your laptop and your A-game!',
-    challenges: ['Build a real-time chat app', 'Fix 5 open source bugs'],
-  },
-  {
-    id: 2,
-    title: 'AI Ethics Discussion Circle',
-    area: 'Central Library, Room 4B',
-    distance: '4.1 km',
-    type: 'Discussion',
-    date: 'Tomorrow, 5:00 PM',
-    attendees: 12,
-    hasGaming: false,
-    hasChallenges: false,
-    isInstant: false,
-    image: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=400',
-    description: 'A deep dive into the ethical implications of recent advancements in generative AI.',
-    challenges: [],
-  },
-  {
-    id: 3,
-    title: 'Startup Pitch & Play',
-    area: 'Innovation Center',
-    distance: '1.2 km',
-    type: 'Networking',
-    date: 'Friday, 7:00 PM',
-    attendees: 56,
-    hasGaming: true,
-    hasChallenges: false,
-    isInstant: true,
-    image: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=400',
-    description: 'Pitch your startup idea in 60 seconds, then enjoy some retro arcade gaming.',
-    challenges: [],
-  },
-  {
-    id: 4,
-    title: 'Algorithm Problem Solving',
-    area: 'University Cafe',
-    distance: '0.8 km',
-    type: 'Study',
-    date: 'Today, 8:00 PM',
-    attendees: 8,
-    hasGaming: false,
-    hasChallenges: true,
-    isInstant: true,
-    image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=400',
-    description: 'Preparing for interviews? Let\'s solve LeetCode Hard problems together.',
-    challenges: ['Solve 3 graph problems in 1 hour'],
-  }
+  { id:1, title:'Full-Stack Developer Hackathon', area:'Tech Hub Downtown', distance:'2.4 km', type:'Coding', date:'Today, 6:00 PM', attendees:34, hasGaming:true, hasChallenges:true, isInstant:true, image:'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=400', description:'Join us for an evening of intense coding, pizza, and networking. Bring your laptop and your A-game!', challenges:['Build a real-time chat app','Fix 5 open source bugs'] },
+  { id:2, title:'AI Ethics Discussion Circle', area:'Central Library, Room 4B', distance:'4.1 km', type:'Discussion', date:'Tomorrow, 5:00 PM', attendees:12, hasGaming:false, hasChallenges:false, isInstant:false, image:'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=400', description:'A deep dive into the ethical implications of recent advancements in generative AI.', challenges:[] },
+  { id:3, title:'Startup Pitch & Play', area:'Innovation Center', distance:'1.2 km', type:'Networking', date:'Friday, 7:00 PM', attendees:56, hasGaming:true, hasChallenges:false, isInstant:true, image:'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=400', description:"Pitch your startup idea in 60 seconds, then enjoy some retro arcade gaming.", challenges:[] },
+  { id:4, title:'Algorithm Problem Solving', area:'University Cafe', distance:'0.8 km', type:'Study', date:'Today, 8:00 PM', attendees:8, hasGaming:false, hasChallenges:true, isInstant:true, image:'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=400', description:"Preparing for interviews? Let's solve LeetCode Hard problems together.", challenges:['Solve 3 graph problems in 1 hour'] },
 ];
 
 const MeetupsNearYou = () => {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredMeetups = MOCK_MEETUPS.filter(meetup => {
-    if (filter === 'instant' && !meetup.isInstant) return false;
-    if (filter === 'gaming' && !meetup.hasGaming) return false;
-    if (filter === 'challenges' && !meetup.hasChallenges) return false;
-    return meetup.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           meetup.area.toLowerCase().includes(searchQuery.toLowerCase());
+  const filtered = MOCK_MEETUPS.filter(m => {
+    if (filter==='instant' && !m.isInstant) return false;
+    if (filter==='gaming' && !m.hasGaming) return false;
+    if (filter==='challenges' && !m.hasChallenges) return false;
+    return m.title.toLowerCase().includes(searchQuery.toLowerCase()) || m.area.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  const FILTERS = [
+    { id:'all', label:'All Meetups' }, { id:'instant', label:'⚡ Instant' },
+    { id:'challenges', label:'🏆 Challenges' }, { id:'gaming', label:'🎮 Gaming' },
+  ];
+
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header Section */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+      {/* Header */}
+      <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}
+        style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)', backdropFilter:'blur(20px)', borderRadius:22, padding:'1.6rem 1.8rem' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'1rem', marginBottom:'1.2rem' }}>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Meetups Near You</h1>
-            <p className="text-gray-500 mt-1">Discover, join, and collaborate with peers in your area</p>
+            <h1 style={{ fontSize:'1.5rem', fontWeight:800, letterSpacing:'-.03em', marginBottom:'.3rem' }}>
+              Meetups <span style={{ background:`linear-gradient(135deg,${T.lime},${T.blue})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Near You</span>
+            </h1>
+            <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'.875rem' }}>Discover, join, and collaborate with peers in your area.</p>
           </div>
-          <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Host a Meetup
+          <button style={{ display:'flex', alignItems:'center', gap:'.5rem', padding:'.65rem 1.4rem', borderRadius:12, border:'none', background:`linear-gradient(135deg,${T.lime},#4bc24b)`, color:'#0D0C1D', fontWeight:700, fontSize:'.85rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>
+            + Host a Meetup
           </button>
         </div>
-
-        {/* Filters and Search */}
-        <div className="mt-8 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        {/* Search + filters */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:'1rem', alignItems:'center' }}>
+          <div style={{ position:'relative', flex:1, minWidth:200 }}>
+            <div style={{ position:'absolute', left:'.9rem', top:'50%', transform:'translateY(-50%)', color:'rgba(255,255,255,0.3)', lineHeight:0 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </div>
-            <input
-              type="text"
-              placeholder="Search by name or area..."
-              className="pl-10 w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 py-2.5 transition-colors border outline-none"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <input type="text" placeholder="Search by name or area..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)}
+              style={{ width:'100%', boxSizing:'border-box', padding:'.7rem 1rem .7rem 2.6rem', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:12, color:'#fff', fontSize:'.875rem', outline:'none', fontFamily:"'Sora',sans-serif" }}/>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-            {[
-              { id: 'all', label: 'All Meetups' },
-              { id: 'instant', label: '⚡ Join Instant' },
-              { id: 'challenges', label: '🏆 Challenges' },
-              { id: 'gaming', label: '🎮 Gaming' }
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
-                  filter === f.id 
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {f.label}
-              </button>
+          <div style={{ display:'flex', gap:'.5rem', flexWrap:'wrap' }}>
+            {FILTERS.map(f => (
+              <button key={f.id} onClick={()=>setFilter(f.id)}
+                style={{ padding:'.5rem 1rem', borderRadius:10, border:'none', cursor:'pointer', fontFamily:"'Sora',sans-serif", fontSize:'.8rem', fontWeight:600, transition:'all .2s', whiteSpace:'nowrap',
+                  background: filter===f.id?`rgba(122,219,120,0.15)`:'rgba(255,255,255,0.05)',
+                  color: filter===f.id?T.lime:'rgba(255,255,255,0.52)',
+                  border: filter===f.id?`1px solid rgba(122,219,120,0.35)`:'1px solid rgba(255,255,255,0.08)',
+                }}>{f.label}</button>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Meetups Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredMeetups.map((meetup, idx) => (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            key={meetup.id}
-            className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group flex flex-col h-full"
-          >
-            {/* Card Image Header */}
-            <div className="relative h-48 overflow-hidden">
-              <img 
-                src={meetup.image} 
-                alt={meetup.title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
-              
-              <div className="absolute top-4 right-4 flex gap-2">
-                {meetup.isInstant && (
-                  <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-lg">
-                    ⚡ Instant
-                  </span>
-                )}
-              </div>
-              
-              <div className="absolute bottom-4 left-4 right-4 text-white">
-                <span className="bg-indigo-600/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 rounded-full mb-2 inline-block">
-                  {meetup.type}
-                </span>
-                <h3 className="text-xl font-bold leading-tight line-clamp-2">{meetup.title}</h3>
-              </div>
-            </div>
-
-            {/* Card Body */}
-            <div className="p-5 flex-1 flex flex-col">
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <span className="truncate">{meetup.area}</span>
-                <span className="text-gray-300">•</span>
-                <span className="font-medium text-indigo-600">{meetup.distance}</span>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <span>{meetup.date}</span>
-              </div>
-
-              <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1">
-                {meetup.description}
-              </p>
-
-              {/* Tags / Options */}
-              <div className="flex flex-wrap gap-2 mb-5">
-                {meetup.hasGaming && (
-                  <span className="bg-purple-50 text-purple-600 border border-purple-100 text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                    🎮 Gaming Session
-                  </span>
-                )}
-                {meetup.hasChallenges && (
-                  <span className="bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                    🏆 Coding Challenges
-                  </span>
-                )}
-                <span className="bg-gray-50 text-gray-600 border border-gray-100 text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                  👥 {meetup.attendees} attending
-                </span>
-              </div>
-
-              {meetup.challenges.length > 0 && filter === 'challenges' && (
-                <div className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Active Challenge</span>
-                  <p className="text-sm text-gray-600 mt-1">{meetup.challenges[0]}</p>
+      {/* Grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'1.2rem' }}>
+        {filtered.map((meetup,i) => {
+          const tc = TYPE_CLR[meetup.type]||T.purple;
+          return (
+            <motion.div key={meetup.id} initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.07 }}
+              style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)', backdropFilter:'blur(20px)', borderRadius:20, overflow:'hidden', display:'flex', flexDirection:'column', transition:'all .3s' }}
+              onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-5px)'; e.currentTarget.style.borderColor=`${tc}40`; e.currentTarget.style.boxShadow=`0 20px 50px rgba(0,0,0,0.3)`; }}
+              onMouseLeave={e=>{ e.currentTarget.style.transform=''; e.currentTarget.style.borderColor='rgba(255,255,255,0.09)'; e.currentTarget.style.boxShadow=''; }}>
+              {/* Image */}
+              <div style={{ position:'relative', height:160, overflow:'hidden' }}>
+                <img src={meetup.image} alt={meetup.title} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(13,12,29,0.85) 0%,transparent 50%)' }}/>
+                {meetup.isInstant && <span style={{ position:'absolute', top:'0.7rem', right:'0.7rem', padding:'.3rem .65rem', borderRadius:8, background:'rgba(255,200,118,0.9)', color:'#0D0C1D', fontSize:'.7rem', fontWeight:700 }}>⚡ Instant</span>}
+                <div style={{ position:'absolute', bottom:'0.7rem', left:'0.8rem', right:'0.8rem' }}>
+                  <span style={{ padding:'.25rem .7rem', borderRadius:8, background:`${tc}cc`, color:'#fff', fontSize:'.68rem', fontWeight:700, display:'inline-block', marginBottom:'.4rem' }}>{meetup.type}</span>
+                  <h3 style={{ fontWeight:700, fontSize:'1rem', lineHeight:1.25, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{meetup.title}</h3>
                 </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="mt-auto grid grid-cols-2 gap-3 pt-4 border-t border-gray-50">
-                <button className="flex items-center justify-center gap-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 py-2.5 rounded-xl transition-colors">
-                  Details
-                </button>
-                <button className={`flex items-center justify-center gap-2 text-sm font-medium py-2.5 rounded-xl transition-colors shadow-sm ${
-                  meetup.isInstant 
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
-                }`}>
-                  {meetup.isInstant ? 'Join Now ⚡' : 'RSVP'}
-                </button>
               </div>
-            </div>
-          </motion.div>
-        ))}
+              {/* Body */}
+              <div style={{ padding:'1.1rem', display:'flex', flexDirection:'column', flex:1, gap:'.6rem' }}>
+                <div style={{ fontSize:'.78rem', color:'rgba(255,255,255,0.45)', display:'flex', alignItems:'center', gap:'.4rem' }}>
+                  📍 {meetup.area} <span style={{ color:'rgba(255,255,255,0.25)' }}>•</span> <span style={{ color:tc, fontWeight:600 }}>{meetup.distance}</span>
+                </div>
+                <div style={{ fontSize:'.78rem', color:'rgba(255,255,255,0.45)' }}>📅 {meetup.date}</div>
+                <p style={{ fontSize:'.82rem', color:'rgba(255,255,255,0.5)', lineHeight:1.6, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{meetup.description}</p>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'.4rem' }}>
+                  {meetup.hasGaming && <span style={{ padding:'.25rem .7rem', borderRadius:999, background:'rgba(172,106,255,0.1)', border:'1px solid rgba(172,106,255,0.2)', color:T.purple, fontSize:'.7rem', fontWeight:600 }}>🎮 Gaming</span>}
+                  {meetup.hasChallenges && <span style={{ padding:'.25rem .7rem', borderRadius:999, background:'rgba(122,219,120,0.1)', border:'1px solid rgba(122,219,120,0.2)', color:T.lime, fontSize:'.7rem', fontWeight:600 }}>🏆 Challenges</span>}
+                  <span style={{ padding:'.25rem .7rem', borderRadius:999, background:'rgba(255,255,255,0.06)', color:'rgba(255,255,255,0.45)', fontSize:'.7rem', fontWeight:600 }}>👥 {meetup.attendees}</span>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'.6rem', marginTop:'auto', paddingTop:'.6rem', borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+                  <button style={{ padding:'.6rem', borderRadius:10, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.7)', fontWeight:600, fontSize:'.8rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>Details</button>
+                  <button style={{ padding:'.6rem', borderRadius:10, border:'none', background:meetup.isInstant?`linear-gradient(135deg,${T.gold},${T.coral})`:`linear-gradient(135deg,${T.purple},${T.blue})`, color:meetup.isInstant?'#0D0C1D':'#fff', fontWeight:700, fontSize:'.8rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>
+                    {meetup.isInstant?'Join Now ⚡':'RSVP'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
 
-        {filteredMeetups.length === 0 && (
-          <div className="col-span-1 md:col-span-2 xl:col-span-3 py-16 text-center bg-white rounded-2xl border border-dashed border-gray-200">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-1">No meetups found</h3>
-            <p className="text-gray-500">Try adjusting your filters or search terms</p>
+        {filtered.length===0 && (
+          <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'3rem', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:20 }}>
+            <div style={{ fontSize:'2.5rem', marginBottom:'.8rem' }}>🔍</div>
+            <h3 style={{ fontWeight:700, marginBottom:'.4rem' }}>No meetups found</h3>
+            <p style={{ color:'rgba(255,255,255,0.42)', fontSize:'.875rem' }}>Try adjusting your filters or search terms.</p>
           </div>
         )}
       </div>
