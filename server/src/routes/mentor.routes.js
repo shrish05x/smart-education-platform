@@ -1,10 +1,12 @@
 const express = require('express');
-const { getMentors, getMentorById } = require('../controllers/mentor.controller');
+const { getMentors, getMentorById, createMentorProfile } = require('../controllers/mentor.controller');
+const { protect } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
 router.route('/')
-  .get(getMentors);
+  .get(getMentors)
+  .post(protect, createMentorProfile);
 
 router.route('/:id')
   .get(getMentorById);

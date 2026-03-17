@@ -75,7 +75,7 @@ exports.getSessions = async (req, res) => {
     // A user might be a student or a mentor. Let's fetch sessions where they are either.
     // For this module, let's assume current user is the student viewing their dashboard.
     // But to be thorough, check if this user has a mentor profile.
-    const mentorProfile = await MentorProfile.findOne({ userId: userId });
+    const mentorProfile = await MentorProfile.findOne({ user: userId });
 
     let query = { studentId: userId };
 

@@ -7,7 +7,7 @@ const User = require('../models/User'); // Keep path relative to where it runs o
 const UserModel = require('../models/User');
 const MentorProfileModel = require('../models/MentorProfile');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-education-platform';
+const MONGODB_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/smart-education-platform';
 
 const mentorsData = [
   {
@@ -162,7 +162,7 @@ const seedMentors = async () => {
       // Create Mentor Profile
       await MentorProfileModel.create({
         ...mData,
-        userId: user._id
+        user: user._id
       });
     }
 
