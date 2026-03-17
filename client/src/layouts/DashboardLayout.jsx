@@ -1,12 +1,19 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import DashboardTopbar from '../components/dashboard/DashboardTopbar';
 import { THEME_CSS } from '../theme';
+import { useAuth } from '../context/AuthContext';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { user } = useAuth();
+
+  // Gate: mentor/counselor who haven't taken verification quiz yet.
+  // isVerified===null means quiz never taken.
+  const needsVerification = ['mentor','counselor'].includes(user?.role) && user?.isVerified === undefined;
+  if (needsVerification) return <Navigate to="/verify" replace />;
 
   return (
     <div style={{ display:'flex', height:'100vh', background:'#0D0C1D', color:'#fff', overflowX:'hidden' }}>
