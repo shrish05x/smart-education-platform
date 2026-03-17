@@ -91,7 +91,6 @@ const Dashboard = () => {
         </div>
       </motion.div>
 
-<<<<<<< HEAD
       {/* Profile completion banner */}
       {completion && (
         <motion.div
@@ -133,46 +132,16 @@ const Dashboard = () => {
               className="px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all"
               style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
             >
-              Complete Profile →
+               Complete Profile →
             </button>
           )}
         </motion.div>
       )}
 
-      {/* Quick stats */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
-      >
-        {[
-          { label: 'Study Hours', value: '18.5h', change: '+2.5h', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: '📖' },
-          { label: 'Assignments', value: '34/42', change: '81%', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: '✅' },
-          { label: 'Mentor Sessions', value: '3', change: 'This week', color: 'text-purple-600', bg: 'bg-purple-50', icon: '👨‍🏫' },
-          { label: 'Community Posts', value: '8', change: '+3 new', color: 'text-amber-600', bg: 'bg-amber-50', icon: '💬' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 + i * 0.05 }}
-            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-2xl`}>{stat.icon}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${stat.bg} ${stat.color}`}>{stat.change}</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
-          </motion.div>
-        ))}
-=======
       {/* Stats */}
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:.08 }}
         style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:'1rem' }}>
         {stats.map((s,i) => <StatCard key={s.label} {...s} />)}
->>>>>>> Amit-feature
       </motion.div>
 
       <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:.14 }}>
