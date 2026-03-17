@@ -18,6 +18,13 @@ const notificationRoutes = require('./routes/notification.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const groupRoutes = require('./routes/groups.routes');
+const postsRoutes = require('./routes/posts.routes');
+const commentsRoutes = require('./routes/comments.routes');
+const votesRoutes = require('./routes/votes.routes');
+const profileRoutes = require('./routes/profile.routes');
+
+
 
 const app = express();
 
@@ -67,6 +74,12 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/posts', postsRoutes);
+app.use('/api/comments', commentsRoutes);
+app.use('/api/vote', votesRoutes);
+app.use('/api/users', profileRoutes);
+
 
 // Error handling middleware
 app.use(errorHandler);

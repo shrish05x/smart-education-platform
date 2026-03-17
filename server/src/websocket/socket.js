@@ -1,5 +1,6 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const GroupMessage = require('../models/GroupMessage');
 
 let io;
 
@@ -33,10 +34,9 @@ const initializeSocket = (server) => {
     // Join personal room for notifications
     socket.join(socket.userId);
 
-    // Mentor-Student chat
+    // ── Mentor-Student chat ──────────────────────────────────────────────────
     socket.on('join:mentorship', (sessionId) => {
       socket.join(`mentorship:${sessionId}`);
-      console.log(`User ${socket.userId} joined mentorship room: ${sessionId}`);
     });
 
     socket.on('message:mentorship', (data) => {
@@ -47,7 +47,7 @@ const initializeSocket = (server) => {
       });
     });
 
-    // Community chat
+    // ── Community chat ───────────────────────────────────────────────────────
     socket.on('join:community', (channelId) => {
       socket.join(`community:${channelId}`);
     });
@@ -60,20 +60,70 @@ const initializeSocket = (server) => {
       });
     });
 
-    // Study group chat
-    socket.on('join:studygroup', (groupId) => {
-      socket.join(`studygroup:${groupId}`);
+    // ── Study Group Chat ─────────────────────────────────────────────────────
+
+    // Join a study group room
+    socket.on('join-room', async ({ groupId, userId, userName }) => {
+      socket.join(`group:${groupId}`);
+      socket.groupId = groupId;
+      socket.userName = userName || 'Someone';
+
+      // Broadcast user-joined to room (excluding sender)
+      socket.to(`group:${groupId}`).emit('user-joined', { userName: socket.userName });
+      console.log(`${userName} joined group room: ${groupId}`);
     });
 
-    socket.on('message:studygroup', (data) => {
-      io.to(`studygroup:${data.groupId}`).emit('message:studygroup', {
-        senderId: socket.userId,
-        content: data.content,
-        timestamp: new Date(),
-      });
+    // Leave a study group room
+    socket.on('leave-room', ({ groupId, userId }) => {
+      socket.leave(`group:${groupId}`);
+      socket.to(`group:${groupId}`).emit('user-left', { userName: socket.userName });
     });
 
-    // Live notifications
+    // Send a message to the group
+    socket.on('send-message', async (data) => {
+      try {
+        const { groupId, content, senderName, senderAvatar, type } = data;
+
+        if (!content || content.trim() === '') return;
+        if (content.length > 1000) return;
+
+        const message = await GroupMessage.create({
+          groupId,
+          senderId: socket.userId,
+          senderName: senderName || 'Unknown',
+          senderAvatar: senderAvatar || '',
+          content: content.trim(),
+          type: type || 'text',
+        });
+
+        const messageObj = {
+          _id: message._id,
+          groupId,
+          senderId: socket.userId,
+          senderName: message.senderName,
+          senderAvatar: message.senderAvatar,
+          content: message.content,
+          type: message.type,
+          createdAt: message.createdAt,
+        };
+
+        // Broadcast to all in the group room (including sender)
+        io.to(`group:${groupId}`).emit('receive-message', messageObj);
+      } catch (err) {
+        console.error('Error saving message:', err.message);
+      }
+    });
+
+    // Typing indicator
+    socket.on('typing', ({ groupId, userName }) => {
+      socket.to(`group:${groupId}`).emit('user-typing', { userName });
+    });
+
+    socket.on('stop-typing', ({ groupId }) => {
+      socket.to(`group:${groupId}`).emit('stop-typing');
+    });
+
+    // ── Live notifications ───────────────────────────────────────────────────
     socket.on('notification:send', (data) => {
       io.to(data.recipientId).emit('notification:receive', {
         ...data,
@@ -82,6 +132,9 @@ const initializeSocket = (server) => {
     });
 
     socket.on('disconnect', () => {
+      if (socket.groupId) {
+        socket.to(`group:${socket.groupId}`).emit('user-left', { userName: socket.userName });
+      }
       console.log(`User disconnected: ${socket.userId}`);
     });
   });
