@@ -1,10 +1,16 @@
 const express = require('express');
-const router = express.Router();
-const { createSession, getSessions, updateSession } = require('../controllers/mentorship.controller');
+const { createRequest, getSessions } = require('../controllers/mentorship.controller');
 const { protect } = require('../middlewares/auth.middleware');
 
-router.post('/', protect, createSession);
-router.get('/', protect, getSessions);
-router.put('/:id', protect, updateSession);
+const router = express.Router();
+
+// All mentorship routes require authentication
+router.use(protect);
+
+router.route('/request')
+  .post(createRequest);
+
+router.route('/sessions')
+  .get(getSessions);
 
 module.exports = router;

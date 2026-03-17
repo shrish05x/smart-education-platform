@@ -1,10 +1,12 @@
 const express = require('express');
-const router = express.Router();
-const { getMentors, getMentorById, updateMentorProfile } = require('../controllers/mentor.controller');
-const { protect, authorize } = require('../middlewares/auth.middleware');
+const { getMentors, getMentorById } = require('../controllers/mentor.controller');
 
-router.get('/', getMentors);
-router.get('/:id', getMentorById);
-router.put('/profile', protect, authorize('mentor'), updateMentorProfile);
+const router = express.Router();
+
+router.route('/')
+  .get(getMentors);
+
+router.route('/:id')
+  .get(getMentorById);
 
 module.exports = router;

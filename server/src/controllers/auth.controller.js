@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const User = require('../models/User');
+const MentorProfile = require('../models/MentorProfile');
 const { generateToken } = require('../utils/jwt.utils');
 
 // Helper: send token response
@@ -35,6 +36,19 @@ const register = async (req, res) => {
     }
 
     const user = await User.create({ name, email, password, role, university });
+
+    // Automatically create a MentorProfile if the user registers as a mentor
+    if (role === 'mentor') {
+      await MentorProfile.create({
+        userId: user._id,
+        name: user.name,
+        industry: 'General', // Default industry required by schema
+        experience: 1,       // Default experience required by schema
+        expertise: [],
+        bio: 'I am a new mentor on the platform.',
+      });
+    }
+
     sendTokenResponse(user, 201, res);
   } catch (error) {
     console.error('Registration error stack:', error.stack);

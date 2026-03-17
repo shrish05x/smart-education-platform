@@ -12,7 +12,10 @@ import DashboardProfile from '../pages/DashboardProfile';
 import DashboardProgress from '../pages/DashboardProgress';
 import DashboardActivity from '../pages/DashboardActivity';
 import AiAssistant from '../pages/AiAssistant';
-import MentorDirectory from '../pages/MentorDirectory';
+import MentorDiscovery from '../pages/MentorDiscovery';
+import MentorProfileDetail from '../pages/MentorProfileDetail';
+import MentorshipRequest from '../pages/MentorshipRequest';
+import SessionsDashboard from '../pages/SessionsDashboard';
 import CommunityForum from '../pages/CommunityForum';
 import MentalHealthSupport from '../pages/MentalHealthSupport';
 import InternshipsPage from '../pages/InternshipsPage';
@@ -48,7 +51,12 @@ const AppRouter = () => {
         <Route path="/dashboard/progress" element={<DashboardProgress />} />
         <Route path="/dashboard/activity" element={<DashboardActivity />} />
         <Route path="/ai-assistant" element={<AiAssistant />} />
-        <Route path="/mentors" element={<MentorDirectory />} />
+        {/* Mentorship Module Routes */}
+        <Route path="/mentors" element={<MentorDiscovery />} />
+        <Route path="/mentors/:id" element={<MentorProfileDetail />} />
+        <Route path="/mentorship/request" element={<MentorshipRequest />} />
+        <Route path="/mentorship/sessions" element={<SessionsDashboard />} />
+        
         <Route path="/community" element={<CommunityForum />} />
         <Route path="/mental-health" element={<MentalHealthSupport />} />
         <Route path="/internships" element={<InternshipsPage />} />

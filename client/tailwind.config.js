@@ -20,6 +20,10 @@ export default {
           900: '#1e3a8a',
         },
       },
+      fontFamily: {
+        sans: ['DM Sans', 'sans-serif', 'Inter', 'system-ui'],
+        clash: ['DM Serif Display', 'serif', 'sans-serif'],
+      },
     },
   },
   plugins: [],
