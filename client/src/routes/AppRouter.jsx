@@ -32,6 +32,7 @@ import AdminPanel from '../pages/AdminPanel';
 import ResourceLibrary from '../pages/ResourceLibrary';
 import ResourceUpload from '../pages/ResourceUpload';
 import ResourceDetail from '../pages/ResourceDetail';
+import Onboarding from '../pages/Onboarding';
 
 const AppRouter = () => {
   return (
@@ -70,6 +71,7 @@ const AppRouter = () => {
         <Route path="/companies" element={<CompaniesPage />} />
         <Route path="/companies/:id" element={<CompanyProfile />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPanel /></ProtectedRoute>} />
         
         {/* Resource Module Routes */}
