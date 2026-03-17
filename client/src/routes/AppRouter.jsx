@@ -13,7 +13,6 @@ import DashboardProgress from '../pages/DashboardProgress';
 import DashboardActivity from '../pages/DashboardActivity';
 import AiAssistant from '../pages/AiAssistant';
 import MentorDirectory from '../pages/MentorDirectory';
-import CommunityForum from '../pages/CommunityForum';
 import MentalHealthSupport from '../pages/MentalHealthSupport';
 import InternshipBoard from '../pages/InternshipBoard';
 import Profile from '../pages/Profile';
@@ -21,9 +20,21 @@ import AdminPanel from '../pages/AdminPanel';
 import StudyGroups from '../pages/StudyGroups';
 import CreateStudyGroup from '../pages/CreateStudyGroup';
 import StudyGroupDetail from '../pages/StudyGroupDetail';
+
+// Community Section
+import CommunityForum from '../pages/CommunityForum';
 import PostDetail from '../pages/PostDetail';
 import CreatePost from '../pages/CreatePost';
 import UserProfile from '../pages/UserProfile';
+import Leaderboard from '../pages/Leaderboard';
+import { Events, EventDetail } from '../pages/Events';
+import Challenges from '../pages/Challenges';
+import Notifications from '../pages/Notifications';
+
+// Network Section
+import MyNetwork from '../pages/network/index';
+import NetworkRequests from '../pages/network/requests';
+import NetworkSuggestions from '../pages/network/suggestions';
 
 const AppRouter = () => {
   return (
@@ -55,11 +66,19 @@ const AppRouter = () => {
         <Route path="/groups/create" element={<CreateStudyGroup />} />
         <Route path="/groups/:id" element={<StudyGroupDetail />} />
 
-        {/* Community Forum */}
+        {/* Community Forum — 9 routes */}
         <Route path="/community" element={<CommunityForum />} />
         <Route path="/community/post/:id" element={<PostDetail />} />
         <Route path="/community/create" element={<CreatePost />} />
         <Route path="/community/profile/:userId" element={<UserProfile />} />
+        <Route path="/community/leaderboard" element={<Leaderboard />} />
+        <Route path="/community/events" element={<Events />} />
+        <Route path="/community/events/:id" element={<EventDetail />} />
+        <Route path="/community/challenges" element={<Challenges />} />
+        <Route path="/community/notifications" element={<Notifications />} />
+        <Route path="/community/network" element={<MyNetwork />} />
+        <Route path="/community/network/requests" element={<NetworkRequests />} />
+        <Route path="/community/network/suggestions" element={<NetworkSuggestions />} />
       </Route>
     </Routes>
   );

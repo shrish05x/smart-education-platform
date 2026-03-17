@@ -1,60 +1,51 @@
 const Post = require('../models/Post');
-const Vote = require('../models/Vote');
+const User = require('../models/User');
+const { awardPoints } = require('../services/gamificationService');
+const { createNotification } = require('../services/notificationService');
 
 // GET /api/posts
-const getPosts = async (req, res) => {
+exports.getPosts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, tags, sort = 'newest' } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 10);
+    const skip = (page - 1) * limit;
+    const { search, subject, tags, type, sort } = req.query;
 
     const query = {};
+    if (search) query.$text = { $search: search };
+    if (subject) query.subject = subject;
+    if (type) query.type = type;
+    if (tags) query.tags = { $in: tags.split(',').map((t) => t.trim().toLowerCase()) };
 
-    // Full-text search
-    if (search && search.trim()) {
-      query.$text = { $search: search.trim() };
-    }
-
-    // Tag filter (comma-separated)
-    if (tags && tags.trim()) {
-      const tagList = tags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
-      if (tagList.length > 0) query.tags = { $in: tagList };
-    }
-
-    // Sort options
-    let sortObj = { createdAt: -1 }; // newest default
-    if (sort === 'popular') sortObj = { upvotes: -1, createdAt: -1 };
-    if (sort === 'unanswered') {
-      query.commentCount = 0;
-      sortObj = { createdAt: -1 };
-    }
+    let sortObj = { isPinned: -1, createdAt: -1 };
+    if (sort === 'popular') sortObj = { isPinned: -1, upvotes: -1, createdAt: -1 };
+    else if (sort === 'trending') sortObj = { isPinned: -1, views: -1, createdAt: -1 };
+    else if (sort === 'unanswered') { query.commentCount = 0; sortObj = { createdAt: -1 }; }
 
     const [posts, total] = await Promise.all([
       Post.find(query)
         .sort(sortObj)
         .skip(skip)
-        .limit(Number(limit))
-        .populate('author', 'name email profileImage'),
+        .limit(limit)
+        .populate('author', 'name profileImage reputation points badges'),
       Post.countDocuments(query),
     ]);
 
-    res.json({
-      success: true,
-      data: {
-        posts,
-        totalPages: Math.ceil(total / Number(limit)),
-        currentPage: Number(page),
-        totalPosts: total,
-      },
-    });
+    res.json({ success: true, data: { posts, totalPosts: total, totalPages: Math.ceil(total / limit), currentPage: page } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // GET /api/posts/:id
-const getPost = async (req, res) => {
+exports.getPost = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('author', 'name email profileImage');
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).populate('author', 'name profileImage reputation points badges');
+
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
     res.json({ success: true, data: post });
   } catch (err) {
@@ -63,34 +54,38 @@ const getPost = async (req, res) => {
 };
 
 // POST /api/posts
-const createPost = async (req, res) => {
+exports.createPost = async (req, res) => {
   try {
-    const { title, description, tags = [] } = req.body;
+    const { title, description, type = 'question', subject = '', tags = [], attachments = [] } = req.body;
 
-    // Validation
-    if (!title || title.trim().length < 5)
-      return res.status(400).json({ success: false, message: 'Title must be at least 5 characters' });
-    if (title.trim().length > 150)
-      return res.status(400).json({ success: false, message: 'Title must be under 150 characters' });
-    if (!description || description.trim().length < 20)
-      return res.status(400).json({ success: false, message: 'Description must be at least 20 characters' });
-    if (description.trim().length > 5000)
-      return res.status(400).json({ success: false, message: 'Description must be under 5000 characters' });
-
-    // Clean tags
-    const cleanTags = tags
-      .map((t) => t.trim().toLowerCase().replace(/\s+/g, '-').substring(0, 30))
-      .filter(Boolean)
-      .slice(0, 5);
+    if (!title || title.trim().length < 5) return res.status(400).json({ success: false, message: 'Title must be at least 5 characters' });
+    if (!description || description.trim().length < 20) return res.status(400).json({ success: false, message: 'Description must be at least 20 characters' });
 
     const post = await Post.create({
       author: req.user._id,
       title: title.trim(),
       description: description.trim(),
-      tags: cleanTags,
+      type,
+      subject,
+      tags: tags.slice(0, 5).map((t) => t.toLowerCase().trim()),
+      attachments,
     });
 
-    const populated = await post.populate('author', 'name email profileImage');
+    // Award points for asking a question/posting
+    const pointAction = type === 'resource' ? 'share_resource' : 'ask_question';
+    const newBadges = await awardPoints(req.user._id, pointAction);
+    await User.findByIdAndUpdate(req.user._id, { $inc: { postCount: 1 } });
+
+    // Emit badge notifications
+    for (const badge of newBadges) {
+      await createNotification({
+        recipient: req.user._id,
+        type: 'badge',
+        message: `🎉 Congratulations! You earned the "${badge.name}" ${badge.icon} badge!`,
+      });
+    }
+
+    const populated = await Post.findById(post._id).populate('author', 'name profileImage reputation points badges');
     res.status(201).json({ success: true, data: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -98,31 +93,22 @@ const createPost = async (req, res) => {
 };
 
 // PUT /api/posts/:id
-const updatePost = async (req, res) => {
+exports.updatePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
     if (post.author.toString() !== req.user._id.toString())
-      return res.status(403).json({ success: false, message: 'Not authorized to edit this post' });
+      return res.status(403).json({ success: false, message: 'Not authorized' });
 
-    const { title, description, tags } = req.body;
-
-    if (title !== undefined) {
-      if (title.trim().length < 5 || title.trim().length > 150)
-        return res.status(400).json({ success: false, message: 'Title must be 5–150 characters' });
-      post.title = title.trim();
-    }
-    if (description !== undefined) {
-      if (description.trim().length < 20 || description.trim().length > 5000)
-        return res.status(400).json({ success: false, message: 'Description must be 20–5000 characters' });
-      post.description = description.trim();
-    }
-    if (tags !== undefined) {
-      post.tags = tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, '-').substring(0, 30)).slice(0, 5);
-    }
-
+    const { title, description, subject, tags, attachments } = req.body;
+    if (title) post.title = title.trim();
+    if (description) post.description = description.trim();
+    if (subject !== undefined) post.subject = subject;
+    if (tags) post.tags = tags.slice(0, 5).map((t) => t.toLowerCase().trim());
+    if (attachments) post.attachments = attachments;
     await post.save();
-    const populated = await post.populate('author', 'name email profileImage');
+
+    const populated = await Post.findById(post._id).populate('author', 'name profileImage reputation points badges');
     res.json({ success: true, data: populated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -130,18 +116,84 @@ const updatePost = async (req, res) => {
 };
 
 // DELETE /api/posts/:id
-const deletePost = async (req, res) => {
+exports.deletePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
-    if (post.author.toString() !== req.user._id.toString())
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this post' });
+    if (post.author.toString() !== req.user._id.toString() && req.user.role !== 'admin')
+      return res.status(403).json({ success: false, message: 'Not authorized' });
 
     await post.deleteOne();
+    await User.findByIdAndUpdate(req.user._id, { $inc: { postCount: -1 } });
     res.json({ success: true, message: 'Post deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-module.exports = { getPosts, getPost, createPost, updatePost, deletePost };
+// POST /api/posts/:id/accept-answer
+exports.acceptAnswer = async (req, res) => {
+  try {
+    const { commentId } = req.body;
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ success: false, message: 'Post not found' });
+    if (post.author.toString() !== req.user._id.toString())
+      return res.status(403).json({ success: false, message: 'Only the question author can accept answers' });
+
+    const Comment = require('../models/Comment');
+    // Unmark previous accepted answer
+    if (post.acceptedAnswer) await Comment.findByIdAndUpdate(post.acceptedAnswer, { isAcceptedAnswer: false });
+
+    // Toggle: if same answer, unaccept it
+    if (post.acceptedAnswer && post.acceptedAnswer.toString() === commentId) {
+      post.acceptedAnswer = null;
+      await post.save();
+      await Comment.findByIdAndUpdate(commentId, { isAcceptedAnswer: false });
+      return res.json({ success: true, data: { acceptedAnswer: null } });
+    }
+
+    post.acceptedAnswer = commentId;
+    await post.save();
+    const comment = await Comment.findByIdAndUpdate(commentId, { isAcceptedAnswer: true }, { new: true });
+
+    // Award points to comment author and notify them
+    if (comment) {
+      await awardPoints(comment.author, 'answer_accepted');
+      await createNotification({
+        recipient: comment.author,
+        sender: req.user._id,
+        type: 'accepted_answer',
+        postId: post._id,
+        commentId,
+        message: `Your answer was accepted as the best answer! 🎉`,
+      });
+    }
+
+    res.json({ success: true, data: { acceptedAnswer: commentId } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/posts/:id/rate
+exports.ratePost = async (req, res) => {
+  try {
+    const { rating } = req.body;
+    if (!rating || rating < 1 || rating > 5)
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+
+    const post = await Post.findById(req.params.id);
+    if (!post || post.type !== 'resource')
+      return res.status(404).json({ success: false, message: 'Resource post not found' });
+
+    // Remove existing rating from this user if any
+    post.resourceRatings = post.resourceRatings.filter((r) => r.userId.toString() !== req.user._id.toString());
+    post.resourceRatings.push({ userId: req.user._id, rating });
+    post.averageRating = post.resourceRatings.reduce((sum, r) => sum + r.rating, 0) / post.resourceRatings.length;
+    await post.save();
+
+    res.json({ success: true, data: { averageRating: post.averageRating, totalRatings: post.resourceRatings.length } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
