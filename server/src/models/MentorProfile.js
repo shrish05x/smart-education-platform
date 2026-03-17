@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const mentorProfileSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    unique: true
   },
   name: {
     type: String,
@@ -23,11 +24,13 @@ const mentorProfileSchema = new mongoose.Schema({
   }],
   industry: {
     type: String,
-    required: [true, 'Please specify an industry']
+    required: false,
+    default: 'General'
   },
   experience: {
     type: Number,
-    required: [true, 'Please add years of experience']
+    required: false,
+    default: 0
   },
   availability: {
     type: Boolean,

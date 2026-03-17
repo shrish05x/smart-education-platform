@@ -40,7 +40,7 @@ const register = async (req, res) => {
     // Automatically create a MentorProfile if the user registers as a mentor
     if (role === 'mentor') {
       await MentorProfile.create({
-        userId: user._id,
+        user: user._id,
         name: user.name,
         industry: 'General', // Default industry required by schema
         experience: 1,       // Default experience required by schema

@@ -9,7 +9,7 @@ const MentorDirectory = () => {
     const fetchMentors = async () => {
       try {
         const { data } = await api.get('/mentors');
-        setMentors(data);
+        setMentors(data.data || []);
       } catch (error) {
         console.error('Error fetching mentors:', error);
       } finally {

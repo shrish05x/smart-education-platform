@@ -25,7 +25,7 @@ exports.getMentors = async (req, res) => {
       query.availability = availability === 'true';
     }
 
-    let mongooseQuery = MentorProfile.find(query);
+    let mongooseQuery = MentorProfile.find(query).populate('user', 'name email avatar');
 
     // 4. Sort handling
     // Options: Most Experienced (experience desc), Top Rated (rating desc), Most Sessions (sessionCount desc)
@@ -61,7 +61,7 @@ exports.getMentors = async (req, res) => {
 // @access  Public
 exports.getMentorById = async (req, res) => {
   try {
-    const mentor = await MentorProfile.findById(req.params.id).populate('userId', 'name email avatar');
+    const mentor = await MentorProfile.findById(req.params.id).populate('user', 'name email avatar');
 
     if (!mentor) {
       return res.status(404).json({ success: false, message: 'Mentor not found' });
@@ -77,5 +77,47 @@ exports.getMentorById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Mentor not found' });
     }
     res.status(500).json({ success: false, message: 'Server Error retrieving mentor' });
+  }
+};
+// @route   POST /api/mentors
+// @access  Private
+exports.createMentorProfile = async (req, res) => {
+  try {
+    console.log('req.user:', req.user); // Debugging log
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    const userId = req.user._id;
+
+    // Check if mentor profile already exists
+    const existingProfile = await MentorProfile.findOne({ user: userId });
+    if (existingProfile) {
+      return res.status(400).json({ success: false, message: 'Mentor profile already exists' });
+    }
+
+    const { name, bio, expertise, industry, experience, linkedIn } = req.body;
+
+    const mentorProfile = await MentorProfile.create({
+      user: userId,
+      name: name || req.user.name,
+      bio: bio || '',
+      expertise: expertise || [],
+      industry: industry || 'General',
+      experience: experience || 0,
+      linkedIn: linkedIn || ''
+    });
+
+    res.status(201).json({
+      success: true,
+      data: mentorProfile
+    });
+  } catch (error) {
+    console.error('Error in createMentorProfile:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Mentor profile already exists' });
+    }
+    res.status(500).json({ success: false, message: 'Server Error creating mentor profile' });
   }
 };
