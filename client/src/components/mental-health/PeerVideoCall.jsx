@@ -1,15 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useCall } from './../../context/CallContext';
 
 const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
-  const [callStatus, setCallStatus] = useState('idle'); // idle, connecting, active, ended
+  const { startOutgoingCall, activeCall, setActiveCall, endCall: contextEndCall } = useCall();
+  const [callStatus, setCallStatus] = useState('idle'); // idle, connecting, active, ended, ai-fallback
   const [callDuration, setCallDuration] = useState(0);
   const [emailInput, setEmailInput] = useState(initialPartner?.email || '');
-  const [partnerName, setPartnerName] = useState(initialPartner?.name || 'Friend / Mentor');
+  const [partnerDetails, setPartnerDetails] = useState(initialPartner || { name: 'Friend / Mentor', isAI: false });
+
+  // If a call is answered from incoming modal while here, sync state
+  useEffect(() => {
+    if (activeCall && activeCall.status === 'active') {
+      setPartnerDetails({
+        name: activeCall.partnerName,
+        email: activeCall.partnerEmail,
+        avatar: activeCall.partnerAvatar,
+        isAI: activeCall.isAI
+      });
+      setCallStatus('active');
+    }
+  }, [activeCall]);
 
   useEffect(() => {
-    if (initialPartner && initialPartner.autoStart) {
-      handleStartCall(initialPartner.name);
+    if (initialPartner && initialPartner.autoStart && callStatus === 'idle') {
+      handleStartCall(initialPartner.email);
     }
   }, [initialPartner]);
 
@@ -27,28 +42,41 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
     return `${m}:${s}`;
   };
 
-  const handleStartCall = (nameOverride) => {
-    if (!emailInput && !nameOverride) return;
+  const handleStartCall = async (emailOverride) => {
+    const targetEmail = emailOverride || emailInput;
+    if (!targetEmail) return;
     
-    if (emailInput && !nameOverride) {
-      // Very basic extraction of name from email if not provided
-      const extracted = emailInput.split('@')[0].replace(/[^a-zA-Z]/g, ' ');
-      setPartnerName(extracted.charAt(0).toUpperCase() + extracted.slice(1) || 'Friend');
-    }
-
     setCallStatus('connecting');
+    setPartnerDetails(prev => ({ ...prev, name: 'Calling...' }));
+
+    // Simulate routing using the context
+    const response = await startOutgoingCall(targetEmail, true);
+    setPartnerDetails(response);
+
     setTimeout(() => {
-      setCallStatus('active');
+      if (response.isAI) {
+        setCallStatus('ai-fallback');
+        // Auto transition into AI call after a brief pause
+        setTimeout(() => setCallStatus('active'), 2000);
+      } else {
+        setCallStatus('active');
+      }
+      
+      setActiveCall({
+        ...response,
+        status: 'active'
+      });
     }, 2500);
   };
 
   const handleEndCall = () => {
     setCallStatus('ended');
+    contextEndCall();
     setTimeout(() => {
       setCallStatus('idle');
       setCallDuration(0);
       setEmailInput('');
-      setPartnerName('Friend / Mentor');
+      setPartnerDetails({ name: 'Friend / Mentor', isAI: false });
       if (onEndCall) onEndCall();
     }, 3000);
   };
@@ -103,14 +131,22 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 p-6 z-20 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg">
-            {partnerName.charAt(0).toUpperCase()}
+          <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-lg overflow-hidden border border-gray-700">
+            {partnerDetails.avatar ? (
+              <img src={partnerDetails.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              partnerDetails.name.charAt(0).toUpperCase()
+            )}
           </div>
           <div>
-            <h3 className="text-white font-medium">{partnerName}</h3>
+            <h3 className="text-white font-medium">
+              {partnerDetails.name} {partnerDetails.isAI && <span className="text-xs bg-indigo-600 text-white px-1.5 py-0.5 rounded ml-2">AI</span>}
+            </h3>
             <p className="text-gray-300 text-xs flex items-center gap-1.5">
               {callStatus === 'active' ? (
                 <><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Connected</>
+              ) : callStatus === 'ai-fallback' ? (
+                <><span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Transferring to AI...</>
               ) : (
                 <><span className="w-2 h-2 rounded-full bg-amber-500"></span> Calling...</>
               )}
@@ -124,12 +160,23 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
 
       {/* Main Video Area */}
       <div className="flex-1 relative flex items-center justify-center bg-gray-900 overflow-hidden">
-        {callStatus === 'connecting' ? (
-          <div className="flex flex-col items-center z-10">
-            <div className="w-20 h-20 rounded-full bg-emerald-600/20 flex items-center justify-center mb-6 animate-pulse border-4 border-emerald-500/30">
-               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        {callStatus === 'connecting' || callStatus === 'ai-fallback' ? (
+          <div className="flex flex-col items-center z-10 text-center px-4">
+            <div className={`w-20 h-20 rounded-full ${callStatus === 'ai-fallback' ? 'bg-indigo-600/20 border-indigo-500/30' : 'bg-emerald-600/20 border-emerald-500/30'} flex items-center justify-center mb-6 animate-pulse border-4`}>
+               {callStatus === 'ai-fallback' ? (
+                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-500"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M16 14H8a4 4 0 00-4 4v2h16v-2a4 4 0 00-4-4z"/><circle cx="12" cy="6" r="1"/></svg>
+               ) : (
+                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+               )}
             </div>
-            <p className="text-gray-400 font-medium text-lg">Ringing {partnerName}...</p>
+            {callStatus === 'ai-fallback' ? (
+              <div>
+                <p className="text-white font-bold text-xl mb-2">User Unavailable</p>
+                <p className="text-indigo-300 font-medium">Transferring you to our empathetic AI Support Guide...</p>
+              </div>
+            ) : (
+              <p className="text-gray-400 font-medium text-lg">Ringing {partnerDetails.email}...</p>
+            )}
           </div>
         ) : (
           <motion.div 
@@ -137,12 +184,22 @@ const PeerVideoCall = ({ initialPartner = null, onEndCall }) => {
             animate={{ opacity: 1 }}
             className="absolute inset-0 w-full h-full"
           >
-            {/* Simulated Partner Camera Feed */}
-            <img 
-              src={initialPartner?.avatar || "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=800"} 
-              alt="Partner Video" 
-              className="w-full h-full object-cover opacity-80"
-            />
+            {/* Simulated Partner Camera Feed or AI Avatar */}
+            {partnerDetails.isAI ? (
+               <div className="w-full h-full flex items-center justify-center relative">
+                 <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-2xl animate-pulse"></div>
+                 <div className={`absolute -inset-8 rounded-full border border-indigo-500/30 max-w-[300px] max-h-[300px] m-auto ${callDuration % 5 !== 0 ? 'animate-ping' : ''}`}></div>
+                 <div className="w-48 h-48 rounded-full bg-gradient-to-br from-indigo-600 to-purple-800 border-4 border-gray-800 shadow-2xl relative z-10 flex items-center justify-center m-auto">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2zm0 6c2.21 0 4 1.79 4 4v4H8v-4c0-2.21 1.79-4 4-4zm0 10v4m-4-2h8"/></svg>
+                 </div>
+               </div>
+            ) : (
+              <img 
+                src={partnerDetails.avatar || `https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=800`} 
+                alt="Partner Video" 
+                className="w-full h-full object-cover opacity-80"
+              />
+            )}
           </motion.div>
         )}
       </div>

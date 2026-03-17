@@ -58,14 +58,30 @@ const MentalHealthSupport = () => {
       {/* Content Area */}
       <div className="mt-8">
         {activeTab === 'overview' && (
-          <div className="grid md:grid-cols-2 gap-6">
-            {resources.map((resource) => (
-              <div key={resource.title} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group">
-                <div className="text-4xl mb-4 transform group-hover:scale-110 transition-transform origin-left">{resource.icon}</div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{resource.title}</h3>
-                <p className="text-gray-500">{resource.desc}</p>
+          <div className="space-y-8">
+            <div className="grid md:grid-cols-2 gap-6">
+              {resources.map((resource) => (
+                <div key={resource.title} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer group">
+                  <div className="text-4xl mb-4 transform group-hover:scale-110 transition-transform origin-left">{resource.icon}</div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{resource.title}</h3>
+                  <p className="text-gray-500">{resource.desc}</p>
+                </div>
+              ))}
+            </div>
+            
+            {/* Developer Tool: Simulate Incoming Call */}
+            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-indigo-900">Test Feature: Incoming Call</h4>
+                <p className="text-sm text-indigo-700">Simulate a friend or mentor calling you right now.</p>
               </div>
-            ))}
+              <button 
+                onClick={() => window.simulateIncomingCall && window.simulateIncomingCall('Jane Doe', 'jane.doe@university.edu')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors"
+              >
+                Simulate Call
+              </button>
+            </div>
           </div>
         )}
 
