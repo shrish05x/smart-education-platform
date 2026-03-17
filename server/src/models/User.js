@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema({
     default: 'https://ui-avatars.com/api/?background=6366f1&color=fff&name=User',
   },
   isActive: { type: Boolean, default: true },
+  
+  // Connections Schema Updates
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friendRequestsReceived: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friendRequestsSent: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
   lastLogin: { type: Date },
   resetPasswordToken: { type: String },
   resetPasswordExpire: { type: Date },

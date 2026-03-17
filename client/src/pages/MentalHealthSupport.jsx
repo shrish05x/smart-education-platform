@@ -1,15 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import MoodTracker from '../components/mental-health/MoodTracker';
 import AIVideoCall from '../components/mental-health/AIVideoCall';
 import MentorTalk from '../components/mental-health/MentorTalk';
 import PeerVideoCall from '../components/mental-health/PeerVideoCall';
 
 const MentalHealthSupport = () => {
-  const [activeTab, setActiveTab] = useState('overview'); // overview, mood, ai-guide, mentor, peer-call
-  const [callContext, setCallContext] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'video' ? 'peer-call' : 'overview'); 
+  const [roomCodeContext, setRoomCodeContext] = useState(
+    searchParams.get('callId') ? searchParams.get('callId') : ''
+  );
+
+  useEffect(() => {
+    // If navigating back to this page with new params while it's already mounted
+    if (searchParams.get('tab') === 'video' && searchParams.get('callId')) {
+      setActiveTab('peer-call');
+      setRoomCodeContext(searchParams.get('callId'));
+    }
+  }, [searchParams]);
 
   const handleStartCall = (partner) => {
-    setCallContext(partner);
+    // When clicking a mentor or peer talk button, we can generate a random short code for them to share
+    const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setRoomCodeContext(randomCode);
     setActiveTab('peer-call');
   };
 
@@ -114,10 +128,9 @@ const MentalHealthSupport = () => {
         {activeTab === 'peer-call' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <PeerVideoCall 
-              initialPartner={callContext} 
+              initialRoomCode={roomCodeContext} 
               onEndCall={() => {
-                setCallContext(null);
-                // stay on the page so they can call someone else, or we could redirect
+                setRoomCodeContext('');
               }} 
             />
           </div>

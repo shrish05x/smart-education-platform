@@ -44,7 +44,6 @@ const menuItems = [
 
 const DashboardSidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   const { user, logout } = useAuth();
-  const { pendingCalls, clearPendingCall } = useCall();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -113,63 +112,11 @@ const DashboardSidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                     </motion.span>
                   )}
                 </AnimatePresence>
-                {/* Pending Call Badge for Meetups/MentalHealth if relevant, or just global badge on the icon */}
-                {item.label === 'Mental Health' && pendingCalls.length > 0 && !collapsed && (
-                  <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {pendingCalls.length}
-                  </span>
-                )}
-                {item.label === 'Mental Health' && pendingCalls.length > 0 && collapsed && (
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-                )}
               </>
             )}
           </NavLink>
         ))}
       </nav>
-
-      {/* Pending Calls Quick Action Area */}
-      <AnimatePresence>
-        {!collapsed && pendingCalls.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="px-3 pb-4"
-          >
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-              <h4 className="text-amber-500 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                Missed Calls
-              </h4>
-              <div className="space-y-2 max-h-[120px] overflow-y-auto hide-scrollbar">
-                {pendingCalls.map(call => (
-                  <div key={call.id} className="flex items-center justify-between bg-gray-900 rounded-lg p-2 group">
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
-                      <img src={call.callerAvatar} alt="o" className="w-6 h-6 rounded-full flex-shrink-0" />
-                      <span className="text-xs text-gray-300 truncate">{call.callerName}</span>
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => { clearPendingCall(call.id); navigate('/mental-health'); }}
-                        className="text-emerald-400 hover:text-emerald-300 p-1" title="Call Back"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                      </button>
-                      <button 
-                        onClick={() => clearPendingCall(call.id)} 
-                        className="text-gray-500 hover:text-red-400 p-1" title="Dismiss"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* User card */}
       <div className="border-t border-gray-800 p-3 flex-shrink-0">
