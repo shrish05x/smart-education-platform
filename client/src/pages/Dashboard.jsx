@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import StudyProgressWidget from '../components/dashboard/widgets/StudyProgressWidget';
 import MentorMessagesWidget from '../components/dashboard/widgets/MentorMessagesWidget';
 import CommunityActivityWidget from '../components/dashboard/widgets/CommunityActivityWidget';
@@ -10,6 +13,15 @@ import CourseCompletionChart from '../components/dashboard/charts/CourseCompleti
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [completion, setCompletion] = useState(null);
+
+  useEffect(() => {
+    if (!user?._id) return;
+    api.get(`/profile/completion-status/${user._id}`)
+      .then(({ data }) => { if (data.success) setCompletion(data.data); })
+      .catch(() => setCompletion({ completionPercentage: 0, isVerified: false }));
+  }, [user]);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -43,6 +55,53 @@ const Dashboard = () => {
           )}
         </div>
       </motion.div>
+
+      {/* Profile completion banner */}
+      {completion && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.02 }}
+          className={`rounded-2xl p-4 shadow-sm border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+            completion.isVerified
+              ? 'bg-emerald-50 border-emerald-200'
+              : 'bg-amber-50 border-amber-200'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {completion.isVerified ? (
+              <span className="text-lg px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold">✔ Verified</span>
+            ) : (
+              <span className="text-lg px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">⚠ Incomplete</span>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-gray-800">
+                Profile {completion.completionPercentage}% complete
+              </p>
+              <div className="w-40 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${completion.completionPercentage}%`,
+                    background: completion.isVerified
+                      ? 'linear-gradient(90deg, #10b981, #059669)'
+                      : 'linear-gradient(90deg, #f59e0b, #d97706)'
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          {!completion.isVerified && (
+            <button
+              onClick={() => navigate('/onboarding')}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm hover:shadow-md transition-all"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            >
+              Complete Profile →
+            </button>
+          )}
+        </motion.div>
+      )}
 
       {/* Quick stats */}
       <motion.div

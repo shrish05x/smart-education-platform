@@ -18,6 +18,7 @@ import MentalHealthSupport from '../pages/MentalHealthSupport';
 import InternshipBoard from '../pages/InternshipBoard';
 import Profile from '../pages/Profile';
 import AdminPanel from '../pages/AdminPanel';
+import Onboarding from '../pages/Onboarding';
 
 const AppRouter = () => {
   return (
@@ -43,6 +44,7 @@ const AppRouter = () => {
         <Route path="/mental-health" element={<MentalHealthSupport />} />
         <Route path="/internships" element={<InternshipBoard />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminPanel /></ProtectedRoute>} />
       </Route>
     </Routes>
