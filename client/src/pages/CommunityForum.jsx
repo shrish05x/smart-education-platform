@@ -1,273 +1,215 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
+const T = { purple:'#AC6AFF', gold:'#FFC876', coral:'#FF776F', lime:'#7ADB78', blue:'#858DFF', pink:'#FF98E2' };
+
+const TABS = [
+  { id:'discussions', label:'Discussions',       icon:'💬', color:T.purple },
+  { id:'discover',    label:'Discover Network',  icon:'🔍', color:T.blue   },
+  { id:'pending',     label:'Pending Requests',  icon:'⏳', color:T.coral  },
+  { id:'connections', label:'My Connections',    icon:'🤝', color:T.lime   },
+];
+
+const Avatar = ({ user, size=48 }) => (
+  <div style={{ width:size, height:size, borderRadius:'50%', background:`linear-gradient(135deg,${T.purple},${T.blue})`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:size*.35, flexShrink:0, overflow:'hidden' }}>
+    {user?.profileImage && !user.profileImage.includes('ui-avatars') ? (
+      <img src={user.profileImage} alt={user.name} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+    ) : user?.name?.charAt(0)?.toUpperCase()}
+  </div>
+);
+
+const BwCard = ({ children, style }) => (
+  <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)', backdropFilter:'blur(20px)', borderRadius:18, ...style }}>
+    {children}
+  </div>
+);
+
+const EmptyState = ({ icon, msg, action }) => (
+  <BwCard style={{ padding:'3rem', textAlign:'center' }}>
+    <div style={{ fontSize:'2.5rem', marginBottom:'.8rem' }}>{icon}</div>
+    <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'.9rem', marginBottom: action?'1rem':0 }}>{msg}</p>
+    {action}
+  </BwCard>
+);
+
 const CommunityForum = () => {
-  const [activeTab, setActiveTab] = useState('discussions'); // discussions, discover, pending, connections
+  const [activeTab, setActiveTab] = useState('discussions');
   const [posts, setPosts] = useState([]);
-  
-  // Network States
   const [discoverUsers, setDiscoverUsers] = useState([]);
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
-  
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+  useEffect(() => { fetchData(); }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'discussions') {
-        const { data } = await api.get('/community/posts');
-        setPosts(data);
-      } else if (activeTab === 'discover') {
-        const { data } = await api.get('/network/discover');
-        setDiscoverUsers(data);
-      } else if (activeTab === 'pending' || activeTab === 'connections') {
-        const { data } = await api.get('/network/connections');
-        setFriends(data.friends || []);
-        setPendingRequests(data.incomingRequests || []);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
+      if (activeTab === 'discussions') { const { data } = await api.get('/community/posts'); setPosts(data); }
+      else if (activeTab === 'discover') { const { data } = await api.get('/network/discover'); setDiscoverUsers(data); }
+      else { const { data } = await api.get('/network/connections'); setFriends(data.friends||[]); setPendingRequests(data.incomingRequests||[]); }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const handleSendRequest = async (userId) => {
-    try {
-      await api.post(`/network/request/${userId}`);
-      // Remove from discover list visually
-      setDiscoverUsers(prev => prev.filter(u => u._id !== userId));
-    } catch (error) {
-      console.error('Error sending request', error);
-      alert(error.response?.data?.message || 'Failed to send request');
-    }
-  };
+  const handleSendRequest  = async id => { try { await api.post(`/network/request/${id}`); setDiscoverUsers(p=>p.filter(u=>u._id!==id)); } catch(e) { alert(e.response?.data?.message||'Failed'); } };
+  const handleAcceptRequest = async id => { try { await api.post(`/network/accept/${id}`); fetchData(); } catch(e) { console.error(e); } };
+  const handleRejectRequest = async id => { try { await api.post(`/network/reject/${id}`); fetchData(); } catch(e) { console.error(e); } };
+  const handleVideoCall    = id => navigate(`/mental-health?tab=video&callId=${id}`);
 
-  const handleAcceptRequest = async (userId) => {
-    try {
-      await api.post(`/network/accept/${userId}`);
-      fetchData(); // Refresh lists
-    } catch (error) {
-      console.error('Error accepting request', error);
-    }
-  };
-
-  const handleRejectRequest = async (userId) => {
-    try {
-      await api.post(`/network/reject/${userId}`);
-      fetchData(); // Refresh lists
-    } catch (error) {
-      console.error('Error rejecting request', error);
-    }
-  };
-
-  const handleVideoCall = (userId) => {
-    navigate(`/dashboard/mental-health?tab=video&callId=${userId}`);
-  };
-
-  // UI Components mapping
-  const renderDiscussions = () => (
-    <>
-      <div className="flex justify-between items-center mb-6 mt-4">
-        <h2 className="text-2xl font-bold text-gray-900">Recent Discussions</h2>
-        <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition font-medium shadow-sm">
-          + New Post
-        </button>
-      </div>
-      {loading ? (
-        <div className="text-center py-10 text-gray-500">Loading discussions...</div>
-      ) : posts.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-           <p className="text-gray-500 font-medium">No posts yet. Be the first to start a discussion!</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <div key={post._id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-              <h3 className="text-lg font-bold text-gray-900">{post.title}</h3>
-              <p className="text-gray-500 text-sm mt-1">
-                 <span className="font-medium text-indigo-600">{post.author?.name}</span> • {new Date(post.createdAt).toLocaleDateString()}
-              </p>
-              <p className="text-gray-700 mt-3 line-clamp-2 leading-relaxed">{post.content}</p>
-              <div className="flex gap-6 mt-4 text-sm text-gray-500 font-medium">
-                <span className="flex items-center gap-1 hover:text-red-500 cursor-pointer transition-colors"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> {post.likes?.length || 0}</span>
-                <span className="flex items-center gap-1 hover:text-indigo-500 cursor-pointer transition-colors"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> {post.commentsCount || 0}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-
-  const renderDiscover = () => (
-    <div className="mt-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Discover Network</h2>
-      {loading ? (
-        <div className="text-center py-10 text-gray-500">Finding connections...</div>
-      ) : discoverUsers.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-           <p className="text-gray-500 font-medium">No new users to discover right now.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {discoverUsers.map(user => (
-            <div key={user._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center hover:shadow-md transition-shadow">
-               <div className="w-24 h-24 rounded-full mb-4 overflow-hidden border-4 border-indigo-50 shadow-sm text-2xl flex items-center justify-center bg-indigo-100 text-indigo-700 font-bold">
-                 {user.profileImage && user.profileImage !== 'https://ui-avatars.com/api/?background=6366f1&color=fff&name=User' ? (
-                   <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
-                 ) : (
-                   user.name.charAt(0).toUpperCase()
-                 )}
-               </div>
-               <h3 className="font-bold text-lg text-gray-900">{user.name}</h3>
-               <p className="text-sm text-indigo-600 font-medium mb-1 capitalize">{user.role}</p>
-               <p className="text-sm text-gray-500 mb-6 flex items-center justify-center gap-1.5 h-10 line-clamp-2">
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                 {user.university || 'University not specified'}
-               </p>
-               <button 
-                 onClick={() => handleSendRequest(user._id)}
-                 className="w-full py-2.5 rounded-xl bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-600 hover:text-white transition-colors border border-indigo-100"
-               >
-                 Connect
-               </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderPending = () => (
-    <div className="mt-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Pending Friend Requests</h2>
-      {loading ? (
-        <div className="text-center py-10 text-gray-500">Loading requests...</div>
-      ) : pendingRequests.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-           <p className="text-gray-500 font-medium">You have no pending connection requests.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {pendingRequests.map(req => (
-            <div key={req._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center text-center">
-               <div className="w-20 h-20 rounded-full mb-4 overflow-hidden border-2 border-indigo-50 bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-700">
-                  {req.profileImage && req.profileImage !== 'https://ui-avatars.com/api/?background=6366f1&color=fff&name=User' ? (
-                   <img src={req.profileImage} alt={req.name} className="w-full h-full object-cover" />
-                 ) : (
-                   req.name.charAt(0).toUpperCase()
-                 )}
-               </div>
-               <h3 className="font-bold text-lg text-gray-900">{req.name}</h3>
-               <p className="text-sm text-gray-500 mb-6">{req.university || 'University not specified'}</p>
-               
-               <div className="flex gap-2 w-full">
-                 <button onClick={() => handleAcceptRequest(req._id)} className="flex-1 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition">Accept</button>
-                 <button onClick={() => handleRejectRequest(req._id)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition">Decline</button>
-               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderConnections = () => (
-    <div className="mt-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">My Connections</h2>
-      {loading ? (
-        <div className="text-center py-10 text-gray-500">Loading network...</div>
-      ) : friends.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-           <p className="text-gray-500 font-medium mb-4">You haven't added any friends yet.</p>
-           <button onClick={() => setActiveTab('discover')} className="px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700">
-             Discover People
-           </button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {friends.map(friend => (
-            <div key={friend._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center justify-between hover:shadow-md transition-shadow">
-               <div className="flex items-center gap-4">
-                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-100 bg-indigo-100 flex items-center justify-center font-bold text-indigo-700">
-                    {friend.profileImage && friend.profileImage !== 'https://ui-avatars.com/api/?background=6366f1&color=fff&name=User' ? (
-                       <img src={friend.profileImage} alt={friend.name} className="w-full h-full object-cover" />
-                     ) : (
-                       friend.name.charAt(0).toUpperCase()
-                     )}
-                 </div>
-                 <div>
-                   <h3 className="font-bold text-lg text-gray-900">{friend.name}</h3>
-                   <p className="text-sm text-gray-500 flex items-center gap-1.5">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                      {friend.university || 'University not specified'}
-                   </p>
-                 </div>
-               </div>
-               
-               <button 
-                 onClick={() => handleVideoCall(friend._id)}
-                 className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl font-bold hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-sm"
-               >
-                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                 Video Call
-               </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+  const SkeletonCard = () => (
+    <BwCard style={{ padding:'1.4rem' }}>
+      {[70,50,90].map((w,i)=><div key={i} style={{ height:12, borderRadius:6, background:'rgba(255,255,255,0.07)', marginBottom:8, width:`${w}%`, animation:'pulse 1.5s ease-in-out infinite' }}/>)}
+    </BwCard>
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Network Header/Tabs */}
-      <div className="mb-8 border-b border-gray-200">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-6 tracking-tight">Community Network</h1>
-        
-        <div className="flex gap-8 overflow-x-auto pb-[-1px]">
-          <button 
-            onClick={() => setActiveTab('discussions')}
-            className={`pb-4 px-1 font-medium text-[15px] whitespace-nowrap border-b-2 transition-colors ${activeTab === 'discussions' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-             Discussions
-          </button>
-          <button 
-            onClick={() => setActiveTab('discover')}
-            className={`pb-4 px-1 font-medium text-[15px] whitespace-nowrap border-b-2 transition-colors ${activeTab === 'discover' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-             Discover Network
-          </button>
-          <button 
-            onClick={() => setActiveTab('pending')}
-            className={`pb-4 px-1 font-medium text-[15px] whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'pending' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-             Pending Requests {pendingRequests.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{pendingRequests.length}</span>}
-          </button>
-          <button 
-            onClick={() => setActiveTab('connections')}
-            className={`pb-4 px-1 font-medium text-[15px] whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'connections' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-             My Connections {friends.length > 0 && <span className="bg-indigo-100 text-indigo-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{friends.length}</span>}
-          </button>
-        </div>
+    <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+      {/* Header */}
+      <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}>
+        <h1 style={{ fontSize:'1.6rem', fontWeight:800, letterSpacing:'-.03em', marginBottom:'.3rem' }}>
+          <span style={{ background:`linear-gradient(135deg,${T.purple},${T.blue})`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>Community</span> Network
+        </h1>
+        <p style={{ color:'rgba(255,255,255,0.4)', fontSize:'.875rem' }}>Connect with peers, share discussions, and grow your student network.</p>
+      </motion.div>
+
+      {/* Tabs */}
+      <div style={{ display:'flex', gap:'.5rem', flexWrap:'wrap', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'1rem' }}>
+        {TABS.map(tab => {
+          const badge = tab.id==='pending'&&pendingRequests.length>0 ? pendingRequests.length : tab.id==='connections'&&friends.length>0 ? friends.length : null;
+          return (
+            <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
+              style={{ display:'flex', alignItems:'center', gap:'.45rem', padding:'.6rem 1.1rem', borderRadius:12, border:'none', cursor:'pointer', fontFamily:"'Sora',sans-serif", fontSize:'.82rem', fontWeight:600, transition:'all .2s',
+                background: activeTab===tab.id?`${tab.color}20`:'rgba(255,255,255,0.05)',
+                color: activeTab===tab.id?tab.color:'rgba(255,255,255,0.52)',
+                borderBottom: activeTab===tab.id?`2px solid ${tab.color}`:'2px solid transparent',
+              }}>
+              <span>{tab.icon}</span>{tab.label}
+              {badge && <span style={{ background:T.coral, color:'#fff', fontSize:'.65rem', fontWeight:700, padding:'.1rem .45rem', borderRadius:999 }}>{badge}</span>}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Dynamic Content Area */}
-      <div className="animate-in fade-in duration-300">
-        {activeTab === 'discussions' && renderDiscussions()}
-        {activeTab === 'discover' && renderDiscover()}
-        {activeTab === 'pending' && renderPending()}
-        {activeTab === 'connections' && renderConnections()}
-      </div>
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        <motion.div key={activeTab} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-14 }} transition={{ duration:.3 }}>
+
+          {/* DISCUSSIONS */}
+          {activeTab==='discussions' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <h2 style={{ fontWeight:700, fontSize:'1.1rem' }}>Recent Discussions</h2>
+                <button style={{ padding:'.55rem 1.2rem', borderRadius:10, border:'none', background:`linear-gradient(135deg,${T.purple},${T.blue})`, color:'#fff', fontWeight:700, fontSize:'.82rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>
+                  + New Post
+                </button>
+              </div>
+              {loading ? [...Array(3)].map((_,i)=><SkeletonCard key={i}/>)
+                : posts.length===0 ? <EmptyState icon="💬" msg="No posts yet. Be the first to start a discussion!"/>
+                : posts.map(post=>(
+                  <BwCard key={post._id} style={{ padding:'1.4rem', transition:'all .3s', cursor:'pointer' }}
+                    onMouseEnter={e=>{e.currentTarget.style.borderColor=`${T.purple}40`;e.currentTarget.style.transform='translateY(-2px)'}}
+                    onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.09)';e.currentTarget.style.transform=''}}>
+                    <h3 style={{ fontWeight:700, fontSize:'1rem', marginBottom:'.3rem' }}>{post.title}</h3>
+                    <p style={{ fontSize:'.78rem', color:'rgba(255,255,255,0.38)', marginBottom:'.75rem' }}>
+                      <span style={{ color:T.purple, fontWeight:600 }}>{post.author?.name}</span> · {new Date(post.createdAt).toLocaleDateString()}
+                    </p>
+                    <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'.875rem', lineHeight:1.65, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>{post.content}</p>
+                    <div style={{ display:'flex', gap:'1.5rem', marginTop:'.9rem', fontSize:'.78rem', color:'rgba(255,255,255,0.38)', fontWeight:500 }}>
+                      <span style={{ cursor:'pointer', transition:'color .2s' }} onMouseEnter={e=>e.target.style.color=T.coral} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.38)'}>♥ {post.likes?.length||0}</span>
+                      <span style={{ cursor:'pointer', transition:'color .2s' }} onMouseEnter={e=>e.target.style.color=T.blue} onMouseLeave={e=>e.target.style.color='rgba(255,255,255,0.38)'}>💬 {post.commentsCount||0}</span>
+                    </div>
+                  </BwCard>
+                ))
+              }
+            </div>
+          )}
+
+          {/* DISCOVER */}
+          {activeTab==='discover' && (
+            <div>
+              <h2 style={{ fontWeight:700, fontSize:'1.1rem', marginBottom:'1.1rem' }}>Discover Network</h2>
+              {loading ? <div style={{ textAlign:'center', padding:'2rem', color:'rgba(255,255,255,0.35)' }}>Finding connections...</div>
+                : discoverUsers.length===0 ? <EmptyState icon="🔍" msg="No new users to discover right now."/>
+                : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'1.1rem' }}>
+                  {discoverUsers.map(user=>(
+                    <BwCard key={user._id} style={{ padding:'1.6rem', textAlign:'center', transition:'all .3s' }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=`${T.blue}40`;e.currentTarget.style.transform='translateY(-4px)'}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.09)';e.currentTarget.style.transform=''}}>
+                      <div style={{ display:'flex', justifyContent:'center', marginBottom:'.9rem' }}><Avatar user={user} size={56}/></div>
+                      <div style={{ fontWeight:700, marginBottom:'.2rem' }}>{user.name}</div>
+                      <div style={{ fontSize:'.75rem', color:T.purple, fontWeight:600, textTransform:'capitalize', marginBottom:'.5rem' }}>{user.role}</div>
+                      <div style={{ fontSize:'.75rem', color:'rgba(255,255,255,0.38)', marginBottom:'1.1rem' }}>{user.university||'University not specified'}</div>
+                      <button onClick={()=>handleSendRequest(user._id)}
+                        style={{ width:'100%', padding:'.6rem', borderRadius:10, border:`1px solid ${T.blue}40`, background:`rgba(133,141,255,0.1)`, color:T.blue, fontWeight:700, fontSize:'.8rem', cursor:'pointer', fontFamily:"'Sora',sans-serif", transition:'all .2s' }}
+                        onMouseEnter={e=>{e.target.style.background=T.blue;e.target.style.color='#fff'}}
+                        onMouseLeave={e=>{e.target.style.background=`rgba(133,141,255,0.1)`;e.target.style.color=T.blue}}>
+                        Connect
+                      </button>
+                    </BwCard>
+                  ))}
+                </div>
+              }
+            </div>
+          )}
+
+          {/* PENDING */}
+          {activeTab==='pending' && (
+            <div>
+              <h2 style={{ fontWeight:700, fontSize:'1.1rem', marginBottom:'1.1rem' }}>Pending Friend Requests</h2>
+              {loading ? <div style={{ textAlign:'center', padding:'2rem', color:'rgba(255,255,255,0.35)' }}>Loading requests...</div>
+                : pendingRequests.length===0 ? <EmptyState icon="⏳" msg="No pending connection requests."/>
+                : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'1.1rem' }}>
+                  {pendingRequests.map(req=>(
+                    <BwCard key={req._id} style={{ padding:'1.6rem', textAlign:'center' }}>
+                      <div style={{ display:'flex', justifyContent:'center', marginBottom:'.9rem' }}><Avatar user={req} size={52}/></div>
+                      <div style={{ fontWeight:700, marginBottom:'.3rem' }}>{req.name}</div>
+                      <div style={{ fontSize:'.75rem', color:'rgba(255,255,255,0.38)', marginBottom:'1.1rem' }}>{req.university||'University not specified'}</div>
+                      <div style={{ display:'flex', gap:'.6rem' }}>
+                        <button onClick={()=>handleAcceptRequest(req._id)} style={{ flex:1, padding:'.6rem', borderRadius:10, border:'none', background:`linear-gradient(135deg,${T.lime},#5bc75b)`, color:'#0D0C1D', fontWeight:700, fontSize:'.8rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>Accept</button>
+                        <button onClick={()=>handleRejectRequest(req._id)} style={{ flex:1, padding:'.6rem', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)', background:'rgba(255,255,255,0.05)', color:'rgba(255,255,255,0.55)', fontWeight:700, fontSize:'.8rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>Decline</button>
+                      </div>
+                    </BwCard>
+                  ))}
+                </div>
+              }
+            </div>
+          )}
+
+          {/* CONNECTIONS */}
+          {activeTab==='connections' && (
+            <div>
+              <h2 style={{ fontWeight:700, fontSize:'1.1rem', marginBottom:'1.1rem' }}>My Connections</h2>
+              {loading ? <div style={{ textAlign:'center', padding:'2rem', color:'rgba(255,255,255,0.35)' }}>Loading network...</div>
+                : friends.length===0 ? <EmptyState icon="🤝" msg="No connections yet." action={<button onClick={()=>setActiveTab('discover')} style={{ padding:'.6rem 1.4rem', borderRadius:10, border:'none', background:`linear-gradient(135deg,${T.purple},${T.blue})`, color:'#fff', fontWeight:700, fontSize:'.82rem', cursor:'pointer', fontFamily:"'Sora',sans-serif" }}>Discover People</button>}/>
+                : <div style={{ display:'flex', flexDirection:'column', gap:'.9rem' }}>
+                  {friends.map(friend=>(
+                    <BwCard key={friend._id} style={{ padding:'1.1rem 1.4rem', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'1rem', transition:'all .3s' }}
+                      onMouseEnter={e=>{e.currentTarget.style.borderColor=`${T.lime}40`}}
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.09)'}}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
+                        <Avatar user={friend} size={44}/>
+                        <div>
+                          <div style={{ fontWeight:700, fontSize:'.9rem' }}>{friend.name}</div>
+                          <div style={{ fontSize:'.75rem', color:'rgba(255,255,255,0.38)' }}>{friend.university||'University not specified'}</div>
+                        </div>
+                      </div>
+                      <button onClick={()=>handleVideoCall(friend._id)}
+                        style={{ display:'flex', alignItems:'center', gap:'.5rem', padding:'.55rem 1.2rem', borderRadius:10, border:`1px solid ${T.lime}40`, background:`rgba(122,219,120,0.1)`, color:T.lime, fontWeight:700, fontSize:'.8rem', cursor:'pointer', fontFamily:"'Sora',sans-serif", transition:'all .2s', flexShrink:0 }}
+                        onMouseEnter={e=>{e.currentTarget.style.background=T.lime;e.currentTarget.style.color='#0D0C1D'}}
+                        onMouseLeave={e=>{e.currentTarget.style.background=`rgba(122,219,120,0.1)`;e.currentTarget.style.color=T.lime}}>
+                        📹 Video Call
+                      </button>
+                    </BwCard>
+                  ))}
+                </div>
+              }
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
