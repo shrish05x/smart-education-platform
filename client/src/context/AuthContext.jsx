@@ -57,6 +57,11 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common['Authorization'];
   };
 
+  /** Called after quiz completes — updates isVerified in local user state */
+  const updateVerification = (isVerified) => {
+    setUser(prev => prev ? { ...prev, isVerified } : prev);
+  };
+
   const forgotPassword = async (email) => {
     const { data } = await api.post('/auth/forgot-password', { email });
     return data;
@@ -68,7 +73,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, forgotPassword, resetPassword }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, forgotPassword, resetPassword, updateVerification }}>
       {children}
     </AuthContext.Provider>
   );
