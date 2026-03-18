@@ -16,7 +16,7 @@ const callGemini = async (systemInstruction, contents, generationConfig = {}) =>
     throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
 
   const body = {
     contents,

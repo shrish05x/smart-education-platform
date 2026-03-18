@@ -102,16 +102,43 @@ const AIVideoCall = () => {
   const [micMuted, setMicMuted]     = useState(false);
   const [videoMuted, setVideoMuted] = useState(false);
   const [chatInput, setChatInput]   = useState('');
+  const [apiError, setApiError]     = useState(null);
 
   /* Refs */
-  const videoRef       = useRef(null);
-  const canvasRef      = useRef(null);
-  const streamRef      = useRef(null);
-  const analysisRef    = useRef(null);
-  const recognitionRef = useRef(null);
-  const timerRef       = useRef(null);
-  const engagementRef  = useRef(100);
-  const lastFaceRef    = useRef(Date.now());
+  const videoRef         = useRef(null);
+  const canvasRef        = useRef(null);
+  const streamRef        = useRef(null);
+  const analysisRef      = useRef(null);
+  const recognitionRef   = useRef(null);
+  const timerRef         = useRef(null);
+  const engagementRef    = useRef(100);
+  const lastFaceRef      = useRef(Date.now());
+  const isProcessingRef  = useRef(false);   // guard: prevent duplicate API calls
+  const cachedVoiceRef   = useRef(null);    // cached TTS voice
+  const debounceRef      = useRef(null);    // STT debounce timer
+  const isSpeakingRef    = useRef(false);   // sync ref for STT pause logic
+  const confidenceRef    = useRef(null);    // latest confidence (avoid stale closure)
+  const moodRef          = useRef('Neutral');
+
+  /* Keep refs in sync with state */
+  useEffect(() => { confidenceRef.current = confidence; }, [confidence]);
+  useEffect(() => { moodRef.current = mood; }, [mood]);
+
+  /* ── Pre-cache TTS voice once voices are loaded ── */
+  useEffect(() => {
+    const cacheVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+      cachedVoiceRef.current =
+        voices.find(v => /female|woman|zira|samantha|victoria|aria|google uk.*female/i.test(v.name)) ||
+        voices.find(v => v.lang === 'en-IN') ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        voices[0];
+    };
+    cacheVoice();
+    window.speechSynthesis.addEventListener('voiceschanged', cacheVoice);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', cacheVoice);
+  }, []);
 
   /* ── Load face-api models ── */
   useEffect(() => {
@@ -213,84 +240,169 @@ const AIVideoCall = () => {
   /* ── Duration formatter ── */
   const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 
-  /* ── Speech-to-text ── */
+  /* ── STT: start listening (pauses while AI speaks) ── */
   const startListening = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR || micMuted) return;
+    // Don't start a new recogniser if one is already active
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+
     const rec = new SR();
     rec.lang = 'en-IN';
     rec.continuous = true;
     rec.interimResults = true;
+
     rec.onresult = (e) => {
+      // Ignore STT results while AI is speaking to avoid echo
+      if (isSpeakingRef.current) return;
+
       let interim = '', final = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) { final += e.results[i][0].transcript; }
         else { interim += e.results[i][0].transcript; }
       }
       setTranscript(interim || final);
-      if (final.trim()) handleUserMessage(final.trim());
+
+      if (final.trim()) {
+        // Debounce: wait 400 ms after final result before sending
+        clearTimeout(debounceRef.current);
+        const captured = final.trim();
+        debounceRef.current = setTimeout(() => handleUserMessage(captured), 400);
+      }
     };
-    rec.onend = () => { if (callStatus === 'active' && !micMuted) rec.start(); };
+
+    rec.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return; // benign
+      console.warn('STT error:', e.error);
+    };
+
+    // Auto-restart when recognition ends (browser stops it after silence)
+    rec.onend = () => {
+      if (callStatus === 'active' && !micMuted && !isSpeakingRef.current) {
+        try { rec.start(); } catch {}
+      }
+    };
+
     rec.start();
     recognitionRef.current = rec;
     setIsListening(true);
   }, [micMuted, callStatus]);
 
-  /* ── Send user message to AI ── */
+  /* ── Send user message to AI (clean API call) ── */
   const handleUserMessage = useCallback(async (text) => {
     if (!text.trim()) return;
-    setMessages(prev => [...prev, { role:'user', text }]);
+    if (isProcessingRef.current) return; // prevent duplicate calls
+    isProcessingRef.current = true;
+
+    setApiError(null);
     setTranscript('');
-    setIsAiThinking(true);
     setChatInput('');
+    // Add user message immediately for responsive feel
+    setMessages(prev => [...prev, { role:'user', text }]);
+    setIsAiThinking(true);
+
     try {
-      const history = messages.slice(-6).map(m => ({ role: m.role==='ai'?'model':'user', parts:[{ text:m.text }] }));
-      const systemPrompt = `You are Priya, a warm and knowledgeable AI study guide. Keep responses concise (2-4 sentences). Be encouraging, educational, and supportive. The student's current confidence level is ${confidence ?? 'unknown'}%, mood is ${mood}.`;
-      const res = await api.post('/ai/chat', { message: systemPrompt + '\n\nStudent: ' + text, history });
-      const reply = res.data.response || "That's a great question! Let's explore this together.";
+      // Build clean message with context injected as a PREFIX — server system prompt stays intact
+      const contextPrefix = [
+        `[Session context — confidence: ${confidenceRef.current ?? '?'}%, mood: ${moodRef.current}]`,
+        'You are Priya, a warm AI study guide. Reply in 2-4 concise, encouraging sentences.',
+        `Student says: ${text}`,
+      ].join('\n');
+
+      const res = await api.post('/ai/chat', { message: contextPrefix });
+      const reply = (res.data.response || '').trim() ||
+        "That's a great question! Let me think through this with you.";
+
       setMessages(prev => [...prev, { role:'ai', text:reply }]);
       speakText(reply);
-    } catch {
-      const fallback = "I'm here! Could you repeat that? Let's dive into your studies together.";
-      setMessages(prev => [...prev, { role:'ai', text:fallback }]);
-      speakText(fallback);
-    } finally { setIsAiThinking(false); }
-  }, [messages, confidence, mood]);
+    } catch (err) {
+      console.error('AI Chat error:', err);
+      // One automatic retry with a simpler message
+      try {
+        const retryRes = await api.post('/ai/chat', { message: text });
+        const retryReply = (retryRes.data.response || '').trim() ||
+          "I heard you! Let me think...";
+        setMessages(prev => [...prev, { role:'ai', text:retryReply }]);
+        speakText(retryReply);
+      } catch {
+        const fallback = "I'm here with you! Could you repeat that? Let's explore your topic together.";
+        setMessages(prev => [...prev, { role:'ai', text:fallback }]);
+        speakText(fallback);
+        setApiError('Connection hiccup — retried automatically.');
+      }
+    } finally {
+      setIsAiThinking(false);
+      isProcessingRef.current = false;
+    }
+  }, []);
 
-  /* ── Text-to-speech ── */
-  const speakText = (text) => {
+  /* ── Text-to-speech (uses pre-cached voice, pauses mic while speaking) ── */
+  const speakText = useCallback((text) => {
+    if (!text) return;
     const synth = window.speechSynthesis;
     synth.cancel();
+
+    // Pause STT recognition while speaking to eliminate echo
+    isSpeakingRef.current = true;
+    try { recognitionRef.current?.abort(); } catch {}
+
     const utt = new SpeechSynthesisUtterance(text);
-    const voices = synth.getVoices();
-    const femaleVoice = voices.find(v => /female|woman|zira|samantha|victoria|aria/i.test(v.name)) || voices.find(v => v.lang === 'en-IN') || voices[0];
-    if (femaleVoice) utt.voice = femaleVoice;
-    utt.rate = 0.95; utt.pitch = 1.1;
+    if (cachedVoiceRef.current) utt.voice = cachedVoiceRef.current;
+    utt.rate = 0.92;   // slightly slower = more natural
+    utt.pitch = 1.08;
+    utt.volume = 1.0;
+
     utt.onstart = () => setIsAiSpeaking(true);
-    utt.onend   = () => setIsAiSpeaking(false);
+    utt.onend = () => {
+      setIsAiSpeaking(false);
+      isSpeakingRef.current = false;
+      // Resume listening after AI finishes speaking (300 ms delay to avoid echo pickup)
+      setTimeout(() => {
+        if (callStatus === 'active') startListening();
+      }, 300);
+    };
+    utt.onerror = () => {
+      setIsAiSpeaking(false);
+      isSpeakingRef.current = false;
+    };
+
+    // Chromium bug: SpeechSynthesis can get stuck — workaround with resume()
     synth.speak(utt);
-  };
+    requestAnimationFrame(() => synth.pause());
+    setTimeout(() => synth.resume(), 50);
+  }, [callStatus, startListening]);
 
-  const toggleMic = () => {
-    setMicMuted(m => !m);
-    if (micMuted) startListening(); else recognitionRef.current?.stop();
-  };
+  const toggleMic = useCallback(() => {
+    setMicMuted(m => {
+      const muted = !m;
+      if (muted) {
+        try { recognitionRef.current?.abort(); } catch {}
+        setIsListening(false);
+      } else {
+        setTimeout(() => startListening(), 100);
+      }
+      return muted;
+    });
+  }, [startListening]);
 
-  const toggleVideo = () => {
+  const toggleVideo = useCallback(() => {
     setVideoMuted(v => {
       const newVal = !v;
-      streamRef.current?.getVideoTracks().forEach(t => t.enabled = !newVal);
+      streamRef.current?.getVideoTracks().forEach(t => { t.enabled = !newVal; });
       return newVal;
     });
-  };
+  }, []);
 
-  /* cleanup */
+  /* cleanup on unmount */
   useEffect(() => () => {
-    streamRef.current?.getTracks().forEach(t=>t.stop());
+    clearTimeout(debounceRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
     clearInterval(analysisRef.current);
     clearInterval(timerRef.current);
-    recognitionRef.current?.stop();
+    try { recognitionRef.current?.abort(); } catch {}
     window.speechSynthesis.cancel();
+    isProcessingRef.current = false;
+    isSpeakingRef.current = false;
   }, []);
 
   /* ─── STYLE CONSTANTS ─── */
