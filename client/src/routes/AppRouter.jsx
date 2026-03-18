@@ -55,9 +55,6 @@ import ResourceUpload from '../pages/ResourceUpload';
 import ResourceDetail from '../pages/ResourceDetail';
 import Onboarding from '../pages/Onboarding';
 
-// Study Resources pages
-import StudyNotes from '../features/study-resources/pages/StudyNotes';
-import NoteDetailView from '../features/study-resources/pages/NoteDetailView';
 
 /** Redirects /dashboard to the right home based on role */
 const RoleBasedDashboard = () => {
@@ -129,9 +126,6 @@ const AppRouter = () => {
         <Route path="/resources/upload"      element={<ResourceUpload />} />
         <Route path="/resources/:id"         element={<ResourceDetail />} />
         
-        {/* Study Resources Routes */}
-        <Route path="/dashboard/study-resources/notes" element={<StudyNotes />} />
-        <Route path="/dashboard/study-resources/notes/:id" element={<NoteDetailView />} />
       </Route>
     </Routes>
   );

@@ -4,6 +4,5 @@ client/node_modules
 server/node_modules
 dist
 
-
 # Ignore uploaded resources
 server/uploads/
