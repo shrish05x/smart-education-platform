@@ -268,80 +268,198 @@ const PeerVideoCall = ({ initialRoomCode = '', onEndCall }) => {
   // ─── IDLE / ENDED screen ─────────────────────────────────────────────────────
   if (callStatus === 'idle' || callStatus === 'ended') {
     return (
-      <div className="flex flex-col lg:flex-row gap-8 w-full max-w-6xl mx-auto py-8 px-4 min-h-[700px]">
-        {/* Main join panel */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-3xl border border-gray-100 shadow-xl p-8 lg:p-12 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 -mr-20 -mt-20" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl opacity-50 -ml-20 -mb-20" />
+      <div style={{ fontFamily:"'Sora','Inter',sans-serif" }}
+        className="flex flex-col lg:flex-row gap-6 w-full max-w-6xl mx-auto py-8 px-4 min-h-[700px]">
 
-          <div className="relative z-10 w-full max-w-md mx-auto text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-500 text-white rounded-[2rem] shadow-lg shadow-emerald-200 flex items-center justify-center mx-auto mb-8 text-4xl transform rotate-3">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        {/* ── Main join panel ── */}
+        <div style={{
+          flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+          background:'rgba(20,18,40,0.85)',
+          border:'1px solid rgba(124,58,237,0.2)',
+          borderRadius:28,
+          backdropFilter:'blur(24px)',
+          WebkitBackdropFilter:'blur(24px)',
+          padding:'3rem 2.5rem',
+          position:'relative', overflow:'hidden',
+          boxShadow:'0 25px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.04)',
+        }}>
+          {/* Background glow blobs */}
+          <div style={{ position:'absolute', top:-80, right:-80, width:260, height:260, borderRadius:'50%', background:'radial-gradient(circle,rgba(107,70,193,0.18) 0%,transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }}/>
+          <div style={{ position:'absolute', bottom:-80, left:-80, width:260, height:260, borderRadius:'50%', background:'radial-gradient(circle,rgba(0,212,180,0.12) 0%,transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }}/>
+
+          <div style={{ position:'relative', zIndex:1, width:'100%', maxWidth:420, margin:'0 auto', textAlign:'center' }}>
+
+            {/* Camera icon */}
+            <div style={{
+              width:88, height:88,
+              background:'linear-gradient(135deg,#00d4b4,#0891b2)',
+              borderRadius:28, margin:'0 auto 2rem',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              boxShadow:'0 0 40px rgba(0,212,180,0.35), 0 8px 32px rgba(0,0,0,0.4)',
+              transform:'rotate(3deg)',
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+              </svg>
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">
+
+            <h2 style={{ fontSize:'2rem', fontWeight:900, color:'#ffffff', letterSpacing:'-.04em', marginBottom:'.6rem', lineHeight:1.2 }}>
               {callStatus === 'ended' ? 'Session Ended' : 'Start a Video Room'}
             </h2>
-            <p className="text-gray-500 mb-10 text-lg">
+            <p style={{ color:'rgba(160,160,192,0.8)', fontSize:'.95rem', lineHeight:1.7, marginBottom:'2.5rem' }}>
               {callStatus === 'ended'
                 ? 'Your session has ended. Enter a new Room Code to call again.'
-                : 'Enter any Room Code — your camera starts immediately. Share the code with your partner to connect.'}
+                : 'Enter any Room Code — share it with a partner to connect instantly.'}
             </p>
 
-            <div className="space-y-4">
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="w-6 h-6 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+
+              {/* Room Code Input */}
+              <div style={{ position:'relative' }}>
+                {/* Key icon */}
+                <div style={{ position:'absolute', top:'50%', left:'1rem', transform:'translateY(-50%)', pointerEvents:'none', color:'rgba(124,58,237,0.6)', display:'flex' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                  </svg>
                 </div>
                 <input
                   type="text"
                   placeholder="e.g.  MATH101"
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:bg-white text-lg transition-all outline-none uppercase font-bold tracking-widest"
                   value={roomCodeInput}
                   onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinRoom()}
+                  style={{
+                    width:'100%', boxSizing:'border-box',
+                    paddingLeft:'3rem', paddingRight:'1.2rem', paddingTop:'1.1rem', paddingBottom:'1.1rem',
+                    background:'#1e1e2e',
+                    border:'1.5px solid rgba(124,58,237,0.25)',
+                    borderRadius:16,
+                    color:'#ffffff',
+                    fontSize:'1.1rem',
+                    fontWeight:700,
+                    letterSpacing:'.18em',
+                    textTransform:'uppercase',
+                    outline:'none',
+                    fontFamily:"'Sora','Inter',monospace",
+                    boxShadow:'inset 0 2px 8px rgba(0,0,0,0.3)',
+                    transition:'border-color .2s, box-shadow .2s',
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = 'rgba(124,58,237,0.75)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.15), inset 0 2px 8px rgba(0,0,0,0.3)';
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = 'rgba(124,58,237,0.25)';
+                    e.target.style.boxShadow = 'inset 0 2px 8px rgba(0,0,0,0.3)';
+                  }}
                 />
               </div>
+
+              {/* Join Button — glassmorphism purple */}
               <button
                 onClick={handleJoinRoom}
                 disabled={!roomCodeInput.trim()}
-                className={`w-full py-4 rounded-2xl font-bold text-white text-lg shadow-lg transition-all transform flex items-center justify-center gap-3 ${
-                  roomCodeInput.trim()
-                    ? 'bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5 hover:shadow-indigo-400/30'
-                    : 'bg-indigo-300 cursor-not-allowed'
-                }`}
+                style={{
+                  width:'100%', padding:'1.1rem',
+                  borderRadius:16, border:'1px solid rgba(167,139,250,0.35)',
+                  background: roomCodeInput.trim()
+                    ? 'linear-gradient(135deg,rgba(107,70,193,0.9),rgba(124,58,237,0.85))'
+                    : 'rgba(107,70,193,0.3)',
+                  backdropFilter:'blur(12px)',
+                  WebkitBackdropFilter:'blur(12px)',
+                  color: roomCodeInput.trim() ? '#fff' : 'rgba(255,255,255,0.4)',
+                  fontWeight:800, fontSize:'1rem',
+                  cursor: roomCodeInput.trim() ? 'pointer' : 'not-allowed',
+                  fontFamily:"'Sora','Inter',sans-serif",
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:'.7rem',
+                  boxShadow: roomCodeInput.trim() ? '0 0 28px rgba(107,70,193,0.4), 0 4px 20px rgba(0,0,0,0.3)' : 'none',
+                  transition:'all .25s',
+                  letterSpacing:'.02em',
+                }}
+                onMouseEnter={e => { if(roomCodeInput.trim()) { e.currentTarget.style.boxShadow='0 0 40px rgba(124,58,237,0.55), 0 6px 24px rgba(0,0,0,0.4)'; e.currentTarget.style.transform='translateY(-2px)'; }}}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow=roomCodeInput.trim()?'0 0 28px rgba(107,70,193,0.4), 0 4px 20px rgba(0,0,0,0.3)':'none'; e.currentTarget.style.transform=''; }}
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
                 Join Video Room
               </button>
             </div>
           </div>
         </div>
 
-        {/* Radar panel */}
-        <div className="w-full lg:w-72 bg-white rounded-3xl border border-gray-100 shadow-xl p-6 flex flex-col items-center justify-center text-center gap-5">
-          <div className="relative w-20 h-20 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border-2 border-indigo-200 animate-ping opacity-60" />
-            <div className="absolute inset-2 rounded-full border-2 border-indigo-300 animate-ping opacity-40" style={{ animationDelay: '300ms' }} />
-            <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-indigo-500"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        {/* ── Radar panel ── */}
+        <div style={{
+          width:'100%', maxWidth:280, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', gap:'1.5rem',
+          background:'rgba(20,18,40,0.85)',
+          border:'1px solid rgba(124,58,237,0.2)',
+          borderRadius:28,
+          backdropFilter:'blur(24px)',
+          WebkitBackdropFilter:'blur(24px)',
+          padding:'2rem 1.5rem',
+          boxShadow:'0 25px 60px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.04)',
+          position:'relative', overflow:'hidden',
+        }}>
+          <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle,rgba(107,70,193,0.08) 0%,transparent 70%)', pointerEvents:'none' }}/>
+
+          {/* Radar rings animation */}
+          <div style={{ position:'relative', width:88, height:88, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            {[1,1.35,1.7].map((s,i) => (
+              <div key={i} style={{ position:'absolute', width:88, height:88, borderRadius:'50%', border:'1.5px solid rgba(107,70,193,0.4)', transform:`scale(${s})`, animation:`ping ${1.5+i*.4}s ease-out ${i*.35}s infinite`, opacity: 1-i*0.25, pointerEvents:'none' }}/>
+            ))}
+            <div style={{ width:56, height:56, borderRadius:'50%', background:'rgba(107,70,193,0.18)', border:'1.5px solid rgba(124,58,237,0.5)', display:'flex', alignItems:'center', justifyContent:'center', backdropFilter:'blur(8px)', boxShadow:'0 0 20px rgba(107,70,193,0.3)' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+              </svg>
             </div>
           </div>
-          <div>
-            <h3 className="font-bold text-gray-900 text-lg mb-1">Radar Match</h3>
-            <p className="text-gray-500 text-sm leading-relaxed">Don't have a code? Get matched instantly with an available peer.</p>
+
+          <div style={{ position:'relative', zIndex:1 }}>
+            <h3 style={{ fontWeight:800, fontSize:'1.1rem', color:'#ffffff', marginBottom:'.4rem' }}>Radar Match</h3>
+            <p style={{ color:'rgba(160,160,192,0.7)', fontSize:'.82rem', lineHeight:1.7 }}>
+              Don't have a code? Get matched instantly with an available peer.
+            </p>
           </div>
+
+          {/* Search Radar button — glassmorphism teal */}
           <button
             onClick={handleRandomConnect}
-            className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all shadow-md shadow-indigo-200"
+            style={{
+              width:'100%', padding:'.9rem',
+              borderRadius:14,
+              border:'1px solid rgba(0,212,180,0.35)',
+              background:'linear-gradient(135deg,rgba(0,180,155,0.75),rgba(8,145,178,0.7))',
+              backdropFilter:'blur(12px)',
+              WebkitBackdropFilter:'blur(12px)',
+              color:'#fff', fontWeight:800, fontSize:'.9rem',
+              cursor:'pointer',
+              fontFamily:"'Sora','Inter',sans-serif",
+              boxShadow:'0 0 24px rgba(0,212,180,0.3), 0 4px 16px rgba(0,0,0,0.3)',
+              transition:'all .25s', letterSpacing:'.02em',
+              position:'relative', zIndex:1,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow='0 0 36px rgba(0,212,180,0.45), 0 6px 20px rgba(0,0,0,0.4)'; e.currentTarget.style.transform='translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow='0 0 24px rgba(0,212,180,0.3), 0 4px 16px rgba(0,0,0,0.3)'; e.currentTarget.style.transform=''; }}
           >
-            Search Radar
+            🔍 Search Radar
           </button>
+
+          {/* Ping animation keyframes */}
+          <style>{`
+            @keyframes ping {
+              0% { transform: scale(var(--s, 1)); opacity: 0.6; }
+              70% { opacity: 0.1; }
+              100% { transform: scale(calc(var(--s, 1) * 1.5)); opacity: 0; }
+            }
+          `}</style>
         </div>
       </div>
     );
   }
 
+
   // ─── ACTIVE call screen ────────────────────────────────────────────────────
+
   return (
     <div className="max-w-5xl mx-auto bg-gray-900 rounded-3xl overflow-hidden shadow-2xl border border-gray-800 relative min-h-[600px] flex flex-col">
 
